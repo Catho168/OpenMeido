@@ -1,0 +1,20 @@
+﻿<Window x:Class="OpenMeido.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="RingMenu" Height="300" Width="300"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="#01FFFFFF"
+        Topmost="True"
+        ShowInTaskbar="False"
+        IsHitTestVisible="True">
+    <Canvas x:Name="MainCanvas" Background="Transparent" IsHitTestVisible="True">
+        <!-- 女仆图片，位于圆盘中心 -->
+        <Image x:Name="MeidoImage"
+               Source="meido.png"
+               Width="80"
+               Height="80"
+               Style="{StaticResource MeidoImageStyle}"
+               Canvas.Left="110" Canvas.Top="110"/>
+    </Canvas>
+</Window>
