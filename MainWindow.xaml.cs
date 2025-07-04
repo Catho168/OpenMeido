@@ -56,6 +56,9 @@ namespace OpenMeido
         // private确保只有当前类可以访问此字段，实现封装原则
         private List<RadialMenuItem> menuItems = new List<RadialMenuItem>();
 
+        // 新增：独立的径向菜单控件实例
+        private RadialMenuControl _radialMenu;
+
         // 内容平移变换与动画状态
         private readonly TranslateTransform _contentShift = new TranslateTransform();
         private const double MAX_WINDOW_SHIFT = 7; // 窗口随鼠标漂移的最大像素
@@ -163,6 +166,24 @@ namespace OpenMeido
                 }
             };
 
+            // ========= 创建独立的径向菜单控件 =========
+            _radialMenu = new RadialMenuControl
+            {
+                MenuItems = menuItems,
+                OnMenuCommand = ExecuteCommand,
+                IsMiniChatOpen = _isMiniChatOpen,
+                IsHitTestVisible = true,
+            };
+
+            // 初始添加到画布，位置置于(0,0) 并位于妹抖酱之上
+            if (MainCanvas != null)
+            {
+                MainCanvas.Children.Add(_radialMenu);
+                Canvas.SetLeft(_radialMenu, 0);
+                Canvas.SetTop(_radialMenu, 0);
+                Canvas.SetZIndex(_radialMenu, 1);
+            }
+
             // 使用Lambda表达式订阅Loaded事件，当窗口加载完成后生成径向按钮
             // (s, e) => 是Lambda表达式语法，s代表sender，e代表事件参数
             Loaded += (s, e) => GenerateRadialButtons();
@@ -208,44 +229,11 @@ namespace OpenMeido
             _contentShift.X = offsetX;
             _contentShift.Y = offsetY;
 
-            // 遍历画布中的所有按钮控件，使用LINQ的OfType<Button>()方法筛选出Button类型的子元素
-            // MainCanvas.Children返回UIElementCollection，包含画布上的所有子控件
-            foreach (Button btn in MainCanvas.Children.OfType<Button>())
+            // 让径向菜单控件自行处理按钮缩放
+            if (_radialMenu != null)
             {
-                // 为每个按钮更新缩放效果，传入按钮引用和鼠标位置
-                UpdateButtonScale(btn, windowMousePos);
+                _radialMenu.UpdateButtonScales(windowMousePos);
             }
-        }
-
-        // 更新按钮缩放效果的核心算法，实现基于距离的动态缩放
-        private void UpdateButtonScale(Button button, Point mousePos)
-        {
-            // 计算按钮的几何中心点坐标
-            // Canvas.GetLeft()获取按钮在画布中的X坐标，ActualWidth是按钮的实际渲染宽度
-            double btnCenterX = Canvas.GetLeft(button) + button.ActualWidth / 2;
-            // 同理计算Y坐标中心点
-            double btnCenterY = Canvas.GetTop(button) + button.ActualHeight / 2;
-
-            // 计算鼠标位置与按钮中心的距离差值
-            // 这是二维平面上两点间距离计算的第一步
-            double deltaX = mousePos.X - btnCenterX;
-            double deltaY = mousePos.Y - btnCenterY;
-
-            // 勾股定理计算距离
-            double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-
-            // 超过此距离的鼠标位置不会影响按钮缩放
-            double maxDist = 150;
-
-            // 使用指数衰减函数计算缩放因子，实现平滑的距离衰减效果
-            // Math.Exp()是自然指数函数，-distance * 3 / maxDist确保距离越远缩放效果越小
-            // 基础缩放为1（原始大小），最大额外缩放为1（即最大2倍大小）
-            double scaleFactor = 1 + 1 * Math.Exp(-distance * 3 / maxDist);
-
-            // 创建并应用缩放变换到按钮
-            // ScaleTransform实现等比例缩放，两个参数分别是X轴和Y轴的缩放比例
-            // RenderTransform属性控制控件的渲染变换，不影响布局计算
-            button.RenderTransform = new ScaleTransform(scaleFactor, scaleFactor);
         }
 
         // 主窗口加载完成事件处理器，在窗口完全初始化后执行
@@ -357,49 +345,34 @@ namespace OpenMeido
         // 这个方法在窗口加载和尺寸改变时被调用
         private void GenerateRadialButtons()
         {
-            // 清除画布上的所有现有子元素，为重新生成按钮做准备
-            // MainCanvas是在XAML中定义的Canvas控件，用作按钮的容器
             if (MainCanvas != null)
             {
                 MainCanvas.Children.Clear();
 
-                // 重新添加女仆图片（确保她始终在中心）
+                // 始终保持妹抖酱在中心
                 if (MeidoImage != null)
                 {
                     MainCanvas.Children.Add(MeidoImage);
                     PositionMeidoInCenter();
                 }
+
+                // 确保径向菜单控件已添加
+                if (_radialMenu != null && !MainCanvas.Children.Contains(_radialMenu))
+                {
+                    MainCanvas.Children.Add(_radialMenu);
+                    Canvas.SetLeft(_radialMenu, 0);
+                    Canvas.SetTop(_radialMenu, 0);
+                    Canvas.SetZIndex(_radialMenu, 1);
+                }
             }
 
-            // 计算径向分布的半径，取窗口宽度和高度中较小值的30%
-            // 这确保按钮始终在窗口可见区域内，并保持合适的间距
-            double radius = Math.Min(ActualWidth, ActualHeight) * 0.3;
-
-            // 如果迷你聊天栏打开，则将按钮分布在左半圆
-            double startAngle = 0;
-            double angleRange = 2 * Math.PI;
-            if (_isMiniChatOpen)
+            // 更新并重新生成按钮
+            if (_radialMenu != null)
             {
-                startAngle = Math.PI / 2;          // 90° （上）
-                angleRange = Math.PI;               // 180° 覆盖左侧
-            }
-
-            // 遍历所有菜单项，为每个菜单项创建对应的按钮
-            for (int i = 0; i < menuItems.Count; i++)
-            {
-                // 计算当前按钮在圆周上的位置坐标
-                var position = CalculateButtonPosition(i, menuItems.Count, radius, startAngle, angleRange);
-
-                // 根据菜单项数据创建按钮控件
-                var button = CreateRadialButton(menuItems[i]);
-
-                // 设置按钮在画布中的位置，减去按钮宽度的一半实现中心对齐
-                // Canvas.SetLeft和Canvas.SetTop是Canvas控件的附加属性设置方法
-                Canvas.SetLeft(button, position.X - button.Width / 2);
-                Canvas.SetTop(button, position.Y - button.Height / 2);
-
-                // 将按钮添加到画布的子元素集合中
-                MainCanvas.Children.Add(button);
+                _radialMenu.Width = ActualWidth;
+                _radialMenu.Height = ActualHeight;
+                _radialMenu.IsMiniChatOpen = _isMiniChatOpen;
+                _radialMenu.Regenerate();
             }
 
             // 在 MainCanvas 清空并重新添加中心妹抖图像后，若迷你聊天栏开启则一并重新添加

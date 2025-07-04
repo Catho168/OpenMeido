@@ -9,10 +9,7 @@ using System.Windows.Media;
 
 namespace OpenMeido
 {
-    /// <summary>
-    /// 聊天窗口的交互逻辑
-    /// 提供用户与女仆进行对话的界面
-    /// </summary>
+    /// 主聊天窗口的交互逻辑
     public partial class ChatWindow : Window
     {
         // API服务实例，用于与AI进行通信
@@ -32,9 +29,7 @@ namespace OpenMeido
 
         private static readonly string TripleSlash = new string('\\', 3); // fix later
 
-        /// <summary>
-        /// 构造函数，初始化聊天窗口
-        /// </summary>
+        /// 初始化聊天窗口
         public ChatWindow()
         {
             InitializeComponent();
@@ -61,9 +56,7 @@ namespace OpenMeido
             this.Closing += ChatWindow_Closing;
         }
 
-        /// <summary>
         /// 初始化API服务
-        /// </summary>
         private void InitializeApiService()
         {
             try
@@ -90,9 +83,7 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 更新状态显示
-        /// </summary>
         /// <param name="status">状态文本</param>
         /// <param name="color">状态颜色</param>
         private void UpdateStatus(string status, Color color)
@@ -102,17 +93,13 @@ namespace OpenMeido
             StatusTextBlock.Foreground = new SolidColorBrush(color) { Opacity = 0.9 };
         }
 
-        /// <summary>
         /// 发送按钮点击事件处理器
-        /// </summary>
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
             await SendMessage();
         }
 
-        /// <summary>
         /// 输入框按键事件处理器
-        /// </summary>
         private async void InputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             // 检查是否按下了Ctrl+Enter组合键
@@ -123,28 +110,22 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 输入框文本变化事件处理器
         /// 用于控制占位符文本的显示和隐藏
-        /// </summary>
         private void InputTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdatePlaceholderVisibility();
         }
 
-        /// <summary>
         /// 更新占位符文本的可见性
         /// 当输入框为空时显示占位符，有内容时隐藏
-        /// </summary>
         private void UpdatePlaceholderVisibility()
         {
             if (PlaceholderTextBlock == null) return;
             PlaceholderTextBlock.Visibility = string.IsNullOrWhiteSpace(InputTextBox.Text) ? Visibility.Visible : Visibility.Hidden;
         }
 
-        /// <summary>
         /// 发送消息的核心方法
-        /// </summary>
         private async Task SendMessage()
         {
             // 获取用户输入的消息
@@ -241,9 +222,7 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 添加用户消息到聊天界面
-        /// </summary>
         /// <param name="message">用户消息内容</param>
         private void AddUserMessage(string message)
         {
@@ -365,17 +344,13 @@ namespace OpenMeido
             return Math.Max(800, Math.Min(3500, totalDelay));
         }
 
-        /// <summary>
         /// 滚动聊天区域到底部
-        /// </summary>
         private void ScrollToBottom()
         {
             ChatScrollViewer.ScrollToEnd();
         }
 
-        /// <summary>
         /// 添加欢迎消息
-        /// </summary>
         private void AddWelcomeMessage()
         {
             var border = new Border

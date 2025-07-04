@@ -2,7 +2,7 @@
 
 [![](https://img.shields.io/badge/%E4%B8%BB%E9%A1%B5-Catho168%2FOpenMeido-orange)](https://github.com/Catho168/OpenMeido)
 
-LLM驱动的桌面电子女仆，灵感来自作品《樱花庄的宠物女孩》中的角色女仆酱(Meido-chan)。
+LLM驱动的桌面电子女仆，基于WPF开发，灵感来自作品《樱花庄的宠物女孩》中的角色女仆酱(Meido-chan)。
 
 ## 目录
 
@@ -64,8 +64,11 @@ LLM驱动的桌面电子女仆，灵感来自作品《樱花庄的宠物女孩�
 要在本地进行开发，您需要安装以下负载和工具：
 
 ·.NET 8.0 SDK
+
 ·Visual Studio 2022，包括【.NET 桌面开发】工作负载
+
 ·Git
+
 ·Powershell Core
 
 在本代码仓库提交时，请尽量遵守[约定式提交规范](https://www.conventionalcommits.org/zh-hans/v1.0.0/)。
