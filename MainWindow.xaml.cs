@@ -1,28 +1,27 @@
-﻿// 引入系统运行时互操作服务，用于调用Windows API函数
+﻿// 系统运行时互操作服务，用于调用Windows API函数
 using System.Runtime.InteropServices;
-// 引入WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
+// WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
 using System.Windows.Interop;
-// 引入3D媒体功能（虽然本项目中未直接使用，但可能用于高级变换）
+// 3D媒体功能
 using System.Windows.Media.Media3D;
-// 引入WPF核心功能，包括窗口、控件等基础类
+// WPF核心
 using System.Windows;
-// 引入.NET基础系统功能，如数学计算、异常处理等
 using System;
-// 引入进程管理功能，用于启动外部程序
+// 进程管理功能，用于启动外部程序
 using System.Diagnostics;
-// 引入泛型集合功能，用于存储和管理菜单项列表
+// 泛型集合功能，用于存储和管理菜单项列表
 using System.Collections.Generic;
-// 引入WPF控件功能，如按钮、画布等UI元素
+// WPF控件功能，如按钮、画布等UI元素
 using System.Windows.Controls;
-// 引入WPF输入处理功能，如鼠标、键盘事件和命令模式
+// WPF输入处理功能，如鼠标、键盘事件和命令模式
 using System.Windows.Input;
-// 引入WPF媒体功能，用于变换、动画和视觉效果
+// WPF媒体功能，用于变换、动画和视觉效果
 using System.Windows.Media;
-// 引入WPF动画功能，用于女仆动画效果
+// WPF动画功能，用于女仆动画效果
 using System.Windows.Media.Animation;
-// 引入WPF图像功能，用于女仆图片显示
+// WPF图像功能，用于女仆图片显示
 using System.Windows.Media.Imaging;
-// 引入LINQ查询功能，用于集合的筛选和操作
+// LINQ查询功能，用于集合的筛选和操作
 using System.Linq;
 // 引入任务以便异步等待关闭动画完成
 using System.Threading.Tasks;
@@ -57,7 +56,7 @@ namespace OpenMeido
         // private确保只有当前类可以访问此字段，实现封装原则
         private List<RadialMenuItem> menuItems = new List<RadialMenuItem>();
 
-        // 新增: 内容平移变换与动画状态
+        // 内容平移变换与动画状态
         private readonly TranslateTransform _contentShift = new TranslateTransform();
         private const double MAX_WINDOW_SHIFT = 7; // 窗口随鼠标漂移的最大像素
         private bool _isClosingAnimationRunning = false;
@@ -71,6 +70,39 @@ namespace OpenMeido
         private ApiService _miniApiService;            // 复用 ApiService
         private AppSettings _miniSettings;             // 设置
         private List<ChatMessage> _miniChatHistory = new List<ChatMessage>();
+
+        // 妹抖酱待机/聊天图片路径常量
+        private const string MeidoStandbyImagePath = "Assets/Meido/Meido_standby.png";
+        private const string MeidoChattingImagePath = "Assets/Meido/Meido_chatting.png";
+
+        // 设置妹抖酱图片辅助方法
+        private void SetMeidoImage(string relativePath)
+        {
+            if (MeidoImage == null) return;
+            try
+            {
+                // 使用 Pack URI 格式加载程序集内嵌资源，避免路径解析问题
+                var packUri = new Uri($"pack://application:,,,/{relativePath}", UriKind.Absolute);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = packUri;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                MeidoImage.Source = bitmap;
+            }
+            catch
+            {
+                // Fallback：尝试以站点路径相对方式加载（调试阶段可能用到）
+                try
+                {
+                    MeidoImage.Source = new BitmapImage(new Uri(relativePath, UriKind.RelativeOrAbsolute));
+                }
+                catch
+                {
+                    // 忽略错误
+                }
+            }
+        }
 
         // 主窗口构造函数，在创建MainWindow实例时自动调用
         // public表示外部代码可以创建此类的实例
@@ -106,9 +138,9 @@ namespace OpenMeido
             {
                 // 创建记事本菜单项，使用对象初始化语法设置属性
                 new RadialMenuItem {
-                    Icon = "📝",  // 使用Unicode表情符号作为图标，跨平台兼容性好
+                    Icon = "📝",
                     Command = MenuCommands.OpenNotepad,  // 引用预定义的命令对象
-                    ToolTip = "打开记事本"  // 设置鼠标悬停时显示的提示文本
+                    ToolTip = "打开记事本"
                 },
                 new RadialMenuItem {
                     Icon = "🔒",
@@ -159,7 +191,7 @@ namespace OpenMeido
         }
 
         // 全局鼠标跟踪事件处理器，实现鼠标悬停时按钮的动态缩放效果
-        // 这是实现"磁性"用户界面的核心方法
+        // 实现"磁性"用户界面的核心方法
         private void GlobalMouseTracker(object sender, MouseEventArgs e)
         {
             // 获取鼠标在窗口中的逻辑坐标
@@ -186,7 +218,6 @@ namespace OpenMeido
         }
 
         // 更新按钮缩放效果的核心算法，实现基于距离的动态缩放
-        // 实现磁性效果
         private void UpdateButtonScale(Button button, Point mousePos)
         {
             // 计算按钮的几何中心点坐标
@@ -201,11 +232,10 @@ namespace OpenMeido
             double deltaY = mousePos.Y - btnCenterY;
 
             // 勾股定理计算距离
-            // Math.Sqrt()计算平方根，得到鼠标到按钮中心的实际像素距离
             double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            // 定义影响半径，超过此距离的鼠标位置不会影响按钮缩放
-            double maxDist = 150; // 影响半径设为150像素
+            // 超过此距离的鼠标位置不会影响按钮缩放
+            double maxDist = 150;
 
             // 使用指数衰减函数计算缩放因子，实现平滑的距离衰减效果
             // Math.Exp()是自然指数函数，-distance * 3 / maxDist确保距离越远缩放效果越小
@@ -235,7 +265,7 @@ namespace OpenMeido
             HwndSource source = HwndSource.FromHwnd(hwnd);
 
             // 添加消息钩子，将我们的消息处理函数注册到Windows消息循环中
-            // 这样我们就能接收到系统发送给窗口的所有消息，包括热键消息
+            // 这样就能接收到系统发送给窗口的所有消息，包括热键消息
             source.AddHook(HwndHook);
 
             // 调用Windows API注册全局热键 Alt+R
@@ -251,7 +281,7 @@ namespace OpenMeido
             var hwnd = new WindowInteropHelper(this).Handle;
 
             // 取消注册热键，释放系统资源
-            // 这很重要，因为全局热键是系统级资源，不释放会导致资源泄漏
+            // 全局热键是系统级资源，不释放会导致资源泄漏
             UnregisterHotKey(hwnd, HOTKEY_ID);
         }
 
@@ -266,7 +296,7 @@ namespace OpenMeido
             // msg是消息类型，wParam包含热键ID
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
-                // 调用显示窗口的方法，在鼠标位置显示菜单
+                // 调用显示窗口的方法
                 ShowAtMouse();
 
                 // 设置handled为true，告诉系统我们已经处理了这个消息
@@ -491,7 +521,7 @@ namespace OpenMeido
             LockWorkStation();
         }
 
-        /// 打开妹抖酱聊天窗口
+        /// 打开聊天窗口
         /// 如果窗口已存在则激活，否则创建新窗口
         private void OpenAiChatWindow(List<ChatMessage> initialMessages)
         {
@@ -511,29 +541,26 @@ namespace OpenMeido
             }
         }
 
-        /// 打开设置窗口
-        /// 以模态对话框形式显示设置界面
+        /// 打开设置
         private void OpenSettingsWindow()
         {
             try
             {
-                // 创建设置窗口
+                // 创建窗口
                 var settingsWindow = new SettingsWindow();
 
-                // 以模态对话框形式显示设置窗口
-                // 这确保用户必须完成设置操作后才能继续使用其他功能
+                // 以模态对话框形式显示
+                // 确保用户必须完成设置操作后才能继续
                 settingsWindow.ShowDialog();
             }
             catch (Exception ex)
             {
-                // 如果打开设置窗口失败，显示错误消息
                 MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        /// 将女仆图片定位到圆盘中心
-        /// 让女仆始终在菜单的中心位置
+        /// 将女仆定位到圆盘中心
         private void PositionMeidoInCenter()
         {
             if (MeidoImage != null)
@@ -542,21 +569,21 @@ namespace OpenMeido
                 double centerX = ActualWidth / 2;
                 double centerY = ActualHeight / 2;
 
-                // 将女仆图片定位到中心（考虑图片自身的尺寸）
+                // 将女仆图片定位到中心
                 Canvas.SetLeft(MeidoImage, centerX - MeidoImage.Width / 2);
                 Canvas.SetTop(MeidoImage, centerY - MeidoImage.Height / 2);
 
-                // 添加可爱的入场动画
+                // 添加入场动画
                 AnimateMeidoEntrance();
             }
         }
 
-        /// 女仆入场动画效果
+        /// 入场动画效果
         private void AnimateMeidoEntrance()
         {
             if (MeidoImage != null)
             {
-                // 创建缩放动画（从小到正常大小）
+                // 创建缩放动画
                 var scaleTransform = new ScaleTransform(0.1, 0.1);
                 MeidoImage.RenderTransform = scaleTransform;
 
@@ -614,7 +641,7 @@ namespace OpenMeido
             }
         }
 
-        // 新增: 关闭动画
+        // 关闭动画
         private async void StartCloseAnimation()
         {
             if (_isClosingAnimationRunning) return;
@@ -716,12 +743,27 @@ namespace OpenMeido
                 meidoSb.Begin();
             }
 
-            // 轻微平移回归
-            _contentShift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs)));
-            _contentShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs)));
+            // 使用 FillBehavior.Stop 使动画结束后不再冻结属性值
+            var shiftAnimX = new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs))
+            {
+                FillBehavior = FillBehavior.Stop
+            };
+            var shiftAnimY = new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs))
+            {
+                FillBehavior = FillBehavior.Stop
+            };
 
-            // 等待动画完成后隐藏窗口
+            _contentShift.BeginAnimation(TranslateTransform.XProperty, shiftAnimX);
+            _contentShift.BeginAnimation(TranslateTransform.YProperty, shiftAnimY);
+
+            // 等待动画完成后清除动画并重置位移，确保下次打开仍能产生视差效果
             await Task.Delay(durationMs + 20);
+            _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
+            _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
+            _contentShift.X = 0;
+            _contentShift.Y = 0;
+
+            // 隐藏窗口
             Hide();
             _isClosingAnimationRunning = false;
         }
@@ -798,6 +840,9 @@ namespace OpenMeido
 
             _isMiniChatOpen = true;
 
+            // 切换妹抖酱至聊天图
+            SetMeidoImage(MeidoChattingImagePath);
+
             // 重新排布按钮到左半圆
             GenerateRadialButtons();
 
@@ -830,6 +875,9 @@ namespace OpenMeido
             }
 
             _miniChatHistory.Clear();
+
+            // 切换妹抖酱至待机图
+            SetMeidoImage(MeidoStandbyImagePath);
 
             GenerateRadialButtons(); // 恢复完整圆形布局
         }

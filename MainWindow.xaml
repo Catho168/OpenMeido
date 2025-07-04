@@ -11,9 +11,9 @@
     <Canvas x:Name="MainCanvas" Background="Transparent" IsHitTestVisible="True">
         <!-- 女仆图片，位于圆盘中心 -->
         <Image x:Name="MeidoImage"
-               Source="meido.png"
-               Width="80"
-               Height="80"
+               Source="Assets/Meido/Meido_standby.png"
+               Width="83"
+               Height="83"
                Style="{StaticResource MeidoImageStyle}"
                Canvas.Left="110" Canvas.Top="110"/>
     </Canvas>

@@ -141,7 +141,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="meido.png" />
+    <Resource Include="Assets\Meido\Meido_standby.png" />
+    <Resource Include="Assets\Meido\Meido_chatting.png" />
     <Resource Include="assets\fonts\HarmonyOS_Sans_SC_*.ttf" />
   </ItemGroup>
   <ItemGroup>
