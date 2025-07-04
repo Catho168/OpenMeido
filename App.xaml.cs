@@ -17,12 +17,8 @@ namespace OpenMeido
                 SetProcessDPIAware();
             }
 
-            // 2. 初始化测试窗口（临时用于调试）
+            // 2. 初始化应用
             base.OnStartup(e);
-
-            // 显示测试窗口来验证各个组件
-            //var testWindow = new TestWindow();
-            //testWindow.Show();
 
             // 注释掉主窗口初始化，避免编译错误
             var mainWin = new MainWindow();

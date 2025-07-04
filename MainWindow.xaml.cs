@@ -884,7 +884,7 @@ namespace OpenMeido
             // 发送完整历史（含本次用户消息）
             string reply = await _miniApiService.SendMessageAsync(new List<ChatMessage>(_miniChatHistory));
 
-            // 显示 AI 回复 (支持 /// 分句)
+            // 显示 AI 回复 ( /// 分句)
             var sentences = SplitAiMessage(reply);
             foreach (var s in sentences)
             {
