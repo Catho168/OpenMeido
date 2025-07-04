@@ -422,11 +422,21 @@ namespace OpenMeido
             double angle;
             if (total == 1)
             {
-                angle = startAngle + angleRange / 2; // 居中
+                // 仅有一个按钮时，直接放在圆弧中点
+                angle = startAngle + angleRange / 2;
             }
             else
             {
-                angle = startAngle + angleRange * index / (total - 1);
+                // 当覆盖整圆（360°）时避免首尾重叠
+                if (Math.Abs(angleRange - 2 * Math.PI) < 0.0001)
+                {
+                    angle = startAngle + angleRange * index / total;
+                }
+                else
+                {
+                    // 非整圆时保持端点对齐，使两端按钮位于起始角和结束角
+                    angle = startAngle + angleRange * index / (total - 1);
+                }
             }
 
             // 计算窗口的中心点坐标，作为圆形布局的圆心
