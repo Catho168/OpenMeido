@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace OpenMeido
 {
@@ -43,7 +44,6 @@ namespace OpenMeido
             // 初始化历史记录界面
             InitializeHistoryPanel();
 
-            // 添加欢迎消息
             AddWelcomeMessage();
 
             // 设置输入框焦点
@@ -469,35 +469,45 @@ namespace OpenMeido
         }
 
         /// 切换历史记录面板的展开/折叠状态
-        private async void ToggleHistoryPanel()
+        private void ToggleHistoryPanel()
         {
             isHistoryExpanded = !isHistoryExpanded;
 
-            // 更新图标
             HistoryToggleIcon.Text = isHistoryExpanded ? "📂" : "📁";
 
-            // 动画展开/折叠
+            // 使用Storyboard实现动画
             double currentHeight = HistoryPanel.Height;
             if (double.IsNaN(currentHeight)) currentHeight = 0;
-
             double targetHeight = isHistoryExpanded ? 200 : 0;
-            const int steps = 10;
-            double stepSize = (targetHeight - currentHeight) / steps;
 
-            for (int i = 0; i < steps; i++)
+            // 创建动画
+            var animation = new DoubleAnimation
             {
-                currentHeight += stepSize;
-                HistoryPanel.Height = currentHeight;
-                await Task.Delay(20);
-            }
+                From = currentHeight,
+                To = targetHeight,
+                Duration = TimeSpan.FromMilliseconds(300),
+                EasingFunction = new PowerEase { Power = 3, EasingMode = EasingMode.EaseInOut } // 非线性动画
+            };
 
-            HistoryPanel.Height = targetHeight;
-
-            // 如果展开，更新历史记录列表
-            if (isHistoryExpanded)
+            // 使用CompositionTarget.Rendering渲染
+            EventHandler renderingHandler = null;
+            renderingHandler = (sender, e) =>
             {
-                UpdateHistoryPanel();
-            }
+                if (HistoryPanel.Height == targetHeight)
+                {
+                    CompositionTarget.Rendering -= renderingHandler;
+                    
+                    // 如果展开，更新历史记录列表
+                    if (isHistoryExpanded)
+                    {
+                        UpdateHistoryPanel();
+                    }
+                }
+            };
+            CompositionTarget.Rendering += renderingHandler;
+
+            // 启动动画
+            HistoryPanel.BeginAnimation(FrameworkElement.HeightProperty, animation);
         }
 
         /// 更新历史记录面板
@@ -636,9 +646,9 @@ namespace OpenMeido
         /// 供外部窗口注入迷你聊天历史，需在Show()后调用
         public void AppendMiniChatHistory(IEnumerable<ChatMessage> messages)
         {
-            if (messages == null) return;
+            if (messages == null || !messages.Any()) return;
 
-            // 清空默认欢迎信息
+            // 当有实际历史消息时才清空默认欢迎信息
             MessagesPanel.Children.Clear();
 
             foreach (var msg in messages)

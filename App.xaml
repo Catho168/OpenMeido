@@ -7,7 +7,7 @@
             <ResourceDictionary.MergedDictionaries>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 自定义妹抖酱主题色 -->
+            <!-- 妹抖酱主题色 -->
             <SolidColorBrush x:Key="MeidoThemeColor" Color="#E87475"/>
             <SolidColorBrush x:Key="MeidoThemeColorLight" Color="#F0A0A1"/>
             <SolidColorBrush x:Key="MeidoThemeColorDark" Color="#D65859"/>
@@ -118,7 +118,7 @@
             <!-- Style modifications start -->
             <FontFamily x:Key="GlobalFontFamily">/assets/fonts/#HarmonyOS Sans SC</FontFamily>
 
-            <!-- 全局字体样式：让所有控件和 TextBlock 默认使用 HarmonyOS Sans SC -->
+            <!-- 全局字体样式 -->
             <Style TargetType="{x:Type TextBlock}">
                 <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
             </Style>

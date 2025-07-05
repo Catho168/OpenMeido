@@ -56,7 +56,7 @@ namespace OpenMeido
         // private确保只有当前类可以访问此字段，实现封装原则
         private List<RadialMenuItem> menuItems = new List<RadialMenuItem>();
 
-        // 新增：独立的径向菜单控件实例
+        // 独立的径向菜单控件实例
         private RadialMenuControl _radialMenu;
 
         // 内容平移变换与动画状态
@@ -64,7 +64,7 @@ namespace OpenMeido
         private const double MAX_WINDOW_SHIFT = 7; // 窗口随鼠标漂移的最大像素
         private bool _isClosingAnimationRunning = false;
 
-        // ==== 迷你聊天相关字段 ====
+        //迷你聊天相关字段
         private bool _isMiniChatOpen = false;          // 迷你聊天栏是否打开
         private int _miniChatRoundCount = 0;           // 对话轮次计数
         private Border _miniChatContainer;             // 聊天UI容器
@@ -95,7 +95,7 @@ namespace OpenMeido
             }
             catch
             {
-                // Fallback：尝试以站点路径相对方式加载（调试阶段可能用到）
+                // Fallback：尝试以站点路径相对方式加载
                 try
                 {
                     MeidoImage.Source = new BitmapImage(new Uri(relativePath, UriKind.RelativeOrAbsolute));
@@ -166,7 +166,7 @@ namespace OpenMeido
                 }
             };
 
-            // ========= 创建独立的径向菜单控件 =========
+            //创建独立的径向菜单控件
             _radialMenu = new RadialMenuControl
             {
                 MenuItems = menuItems,
@@ -203,7 +203,7 @@ namespace OpenMeido
         // private访问修饰符确保只有当前类可以调用此方法
         private void WindowHider(object sender, MouseEventArgs e)
         {
-            // 如果迷你聊天栏已打开，则不自动关闭，避免干扰对话
+            // 如果迷你聊天栏已打开，则不自动关闭
             if (!_isMiniChatOpen)
             {
                 // 触发关闭动画，而不是立即隐藏
@@ -212,7 +212,6 @@ namespace OpenMeido
         }
 
         // 全局鼠标跟踪事件处理器，实现鼠标悬停时按钮的动态缩放效果
-        // 实现"磁性"用户界面的核心方法
         private void GlobalMouseTracker(object sender, MouseEventArgs e)
         {
             // 获取鼠标在窗口中的逻辑坐标
@@ -262,7 +261,7 @@ namespace OpenMeido
         }
 
         // 主窗口关闭事件处理器，负责清理系统资源
-        // CancelEventArgs允许我们取消关闭操作，但这里我们只是清理资源
+        // CancelEventArgs允许取消关闭操作，但这里我们只是清理资源
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             // 获取窗口句柄，使用链式调用简化代码
@@ -322,7 +321,6 @@ namespace OpenMeido
             var screenPos = System.Windows.Forms.Cursor.Position;
 
             // 将物理像素坐标转换为WPF的逻辑像素坐标
-            // 这个转换对于高DPI显示器（如4K显示器）非常重要
             double logicalX = screenPos.X / dpiX;
             double logicalY = screenPos.Y / dpiY;
 
@@ -465,17 +463,14 @@ namespace OpenMeido
             }
             else if (command == MenuCommands.LockWorkstation)
             {
-                // 调用锁定计算机的方法
                 LockComputer();
             }
             else if (command == MenuCommands.OpenAiChat)
             {
-                // 打开聊天窗口
                 OpenAiChatWindow(new List<ChatMessage>(_miniChatHistory));
             }
             else if (command == MenuCommands.OpenSettings)
             {
-                // 打开妹抖酱设置窗口
                 OpenSettingsWindow();
             }
             else
@@ -496,8 +491,6 @@ namespace OpenMeido
         [DllImport("user32.dll", SetLastError = true)]
         static extern void LockWorkStation();
 
-        // 锁定计算机的包装方法，提供更友好的接口
-        // 这个方法封装了Windows API调用，使代码更易读和维护
         private void LockComputer()
         {
             // 调用Windows API锁定工作站
@@ -510,6 +503,9 @@ namespace OpenMeido
         {
             try
             {
+                // 在打开聊天窗口前，先隐藏主窗口内容
+                HideMainWindowContent();
+                
                 var chatWindow = new ChatWindow();
                 chatWindow.Show();
 
@@ -517,10 +513,15 @@ namespace OpenMeido
                 chatWindow.AppendMiniChatHistory(initialMessages);
 
                 chatWindow.Activate();
+                
+                // 监听聊天窗口关闭事件，恢复主窗口状态
+                chatWindow.Closed += (s, e) => RestoreMainWindowContent();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"无法打开妹抖酱的聊天窗口: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                // 如果打开失败，也要恢复主窗口状态
+                RestoreMainWindowContent();
             }
         }
 
@@ -529,18 +530,83 @@ namespace OpenMeido
         {
             try
             {
+                // 在打开设置窗口前，先隐藏主窗口内容
+                HideMainWindowContent();
+                
                 // 创建窗口
                 var settingsWindow = new SettingsWindow();
 
                 // 以模态对话框形式显示
                 // 确保用户必须完成设置操作后才能继续
                 settingsWindow.ShowDialog();
+                
+                // 设置窗口关闭后，恢复主窗口状态
+                RestoreMainWindowContent();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// 隐藏主窗口内容（女仆、按钮、迷你聊天等）
+        private void HideMainWindowContent()
+        {
+            // 隐藏女仆图片
+            if (MeidoImage != null)
+            {
+                MeidoImage.Visibility = Visibility.Hidden;
+            }
+            
+            // 隐藏径向菜单
+            if (_radialMenu != null)
+            {
+                _radialMenu.Visibility = Visibility.Hidden;
+            }
+            
+            // 隐藏所有径向按钮
+            foreach (Button btn in MainCanvas.Children.OfType<Button>())
+            {
+                btn.Visibility = Visibility.Hidden;
+            }
+            
+            // 隐藏迷你聊天容器
+            if (_miniChatContainer != null)
+            {
+                _miniChatContainer.Visibility = Visibility.Hidden;
+            }
+        }
+
+        /// 恢复主窗口内容显示
+        private void RestoreMainWindowContent()
+        {
+            // 恢复女仆图片显示
+            if (MeidoImage != null)
+            {
+                MeidoImage.Visibility = Visibility.Visible;
+            }
+            
+            // 恢复径向菜单显示
+            if (_radialMenu != null)
+            {
+                _radialMenu.Visibility = Visibility.Visible;
+            }
+            
+            // 恢复所有径向按钮显示
+            foreach (Button btn in MainCanvas.Children.OfType<Button>())
+            {
+                btn.Visibility = Visibility.Visible;
+            }
+            
+            // 如果迷你聊天是打开状态，强制关闭并重置为待机状态
+            if (_isMiniChatOpen)
+            {
+                HideMiniChat();
+            }
+            
+            // 确保女仆图片显示为待机状态
+            SetMeidoImage(MeidoStandbyImagePath);
         }
 
         /// 将女仆定位到圆盘中心
@@ -739,7 +805,7 @@ namespace OpenMeido
             _contentShift.BeginAnimation(TranslateTransform.XProperty, shiftAnimX);
             _contentShift.BeginAnimation(TranslateTransform.YProperty, shiftAnimY);
 
-            // 等待动画完成后清除动画并重置位移，确保下次打开仍能产生视差效果
+            // 等待动画完成后清除动画并重置位移，确保下次打开正常
             await Task.Delay(durationMs + 20);
             _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
             _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
@@ -779,7 +845,6 @@ namespace OpenMeido
                     BorderBrush = Brushes.Transparent,
                     BorderThickness = new Thickness(0),
                     CornerRadius = new CornerRadius(0),
-                    // 不额外添加整体阴影，避免出现一个明显的整体矩形轮廓
                     Effect = null
                 };
 
@@ -823,7 +888,6 @@ namespace OpenMeido
 
             _isMiniChatOpen = true;
 
-            // 切换妹抖酱至聊天图
             SetMeidoImage(MeidoChattingImagePath);
 
             // 重新排布按钮到左半圆
@@ -859,7 +923,6 @@ namespace OpenMeido
 
             _miniChatHistory.Clear();
 
-            // 切换妹抖酱至待机图
             SetMeidoImage(MeidoStandbyImagePath);
 
             GenerateRadialButtons(); // 恢复完整圆形布局
@@ -968,7 +1031,7 @@ namespace OpenMeido
             }
         }
 
-        /// 根据 \\\ 分割 AI 回复
+        /// 分割 AI 回复
         private List<string> SplitAiMessage(string message)
         {
             return message.Split(new string[] { @"\\\" }, StringSplitOptions.RemoveEmptyEntries).ToList();

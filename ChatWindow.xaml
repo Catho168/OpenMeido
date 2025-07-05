@@ -34,6 +34,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="LineHeight" Value="18"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
         </Style>
         
         <!-- 用户消息文本样式 -->
@@ -55,6 +56,7 @@
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="AcceptsReturn" Value="True"/>
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
         </Style>
         
         <!-- 发送按钮样式 -->
@@ -196,8 +198,7 @@
                     <!-- 标题文本 -->
                     <StackPanel Grid.Column="0"
                                 Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Margin="15,0,0,0">
+                                VerticalAlignment="Center" Margin="15,0,0,0">
                         <TextBlock Text="💬" FontSize="16" Foreground="White" Margin="0,0,8,0"/>
                         <TextBlock Text="妹抖酱"
                                    FontSize="14"
@@ -208,9 +209,8 @@
                                    Text="待命"
                                    FontSize="11"
                                    Foreground="White"
-                                   Margin="15,0,0,0"
                                    VerticalAlignment="Center"
-                                   Opacity="0.8"/>
+                                   Opacity="0.8" Margin="6,0,0,0"/>
                     </StackPanel>
 
                     <!-- 窗口控制按钮 -->
@@ -290,14 +290,13 @@
                               HorizontalScrollBarVisibility="Disabled"
                               Margin="15,10">
                     <StackPanel x:Name="HistoryListPanel">
-                        <!-- 历史记录项将在这里动态添加 -->
+                        <!-- 历史记录项在这里动态添加 -->
                         <TextBlock Text="📚 聊天历史"
                                    FontSize="14"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource MeidoThemeColor}"
                                    Margin="0,0,0,10"/>
 
-                        <!-- 新建对话按钮 -->
                         <Button x:Name="NewChatButton"
                                 Content="➕ 新建对话"
                                 Background="{StaticResource MeidoThemeColor}"
@@ -310,7 +309,7 @@
 
                         <!-- 历史记录列表容器 -->
                         <StackPanel x:Name="HistoryItemsPanel">
-                            <!-- 历史记录项将在这里动态添加 -->
+                            <!-- 历史记录项在这里动态添加 -->
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
@@ -322,7 +321,7 @@
                           HorizontalScrollBarVisibility="Disabled"
                           Background="White">
                 <StackPanel x:Name="MessagesPanel" Margin="15">
-                    <!-- 消息将通过代码动态添加 -->
+                    <!-- 消息动态添加 -->
                 </StackPanel>
             </ScrollViewer>
 
@@ -351,7 +350,8 @@
                                FontSize="12"
                                Margin="15,12,12,8"
                                IsHitTestVisible="False"
-                               VerticalAlignment="Top"/>
+                               VerticalAlignment="Top"
+                               FontFamily="{StaticResource GlobalFontFamily}"/>
                 </Grid>
                 
                 <!-- 发送按钮和提示 -->

@@ -7,10 +7,8 @@ using System.Web.Script.Serialization;
 
 namespace OpenMeido
 {
-    /// <summary>
     /// AI API服务类，负责与OpenAI格式的API进行通信
     /// 支持发送聊天消息并接收AI回复
-    /// </summary>
     public class ApiService : IDisposable
     {
         // HTTP客户端实例，用于发送API请求
@@ -19,9 +17,7 @@ namespace OpenMeido
         // 应用程序设置，包含API配置信息
         private readonly AppSettings settings;
 
-        /// <summary>
         /// 构造函数，初始化API服务
-        /// </summary>
         /// <param name="settings">应用程序设置对象</param>
         public ApiService(AppSettings settings)
         {
@@ -43,9 +39,7 @@ namespace OpenMeido
         }
 
 
-        /// <summary>
         /// 发送聊天消息到AI API并获取回复（带上下文）
-        /// </summary>
         /// <param name="messagesHistory">完整历史消息列表</param>
         /// <returns>AI的回复消息</returns>
         public async Task<string> SendMessageAsync(List<ChatMessage> messagesHistory)
@@ -215,7 +209,6 @@ namespace OpenMeido
                     return $"解析响应时出错: {ex.Message}\n响应内容: {responseContent}";
                 }
 
-                // 如果没有获取到有效回复，返回错误消息
                 if (string.IsNullOrWhiteSpace(aiReply))
                 {
                     return "没有收到有效的回复。";
@@ -277,9 +270,7 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 测试API连接是否正常
-        /// </summary>
         /// <returns>如果连接成功返回true，否则返回false</returns>
         public async Task<bool> TestConnectionAsync()
         {
@@ -304,18 +295,14 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 释放资源
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
         /// 释放托管和非托管资源
-        /// </summary>
         /// <param name="disposing">是否释放托管资源</param>
         protected virtual void Dispose(bool disposing)
         {
