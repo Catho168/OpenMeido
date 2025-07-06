@@ -8,7 +8,6 @@ using System.Web.Script.Serialization;
 namespace OpenMeido
 {
     /// AI API服务类，负责与OpenAI格式的API进行通信
-    /// 支持发送聊天消息并接收AI回复
     public class ApiService : IDisposable
     {
         // HTTP客户端实例，用于发送API请求
@@ -39,7 +38,7 @@ namespace OpenMeido
         }
 
 
-        /// 发送聊天消息到AI API并获取回复（带上下文）
+        /// 发送聊天消息到AI API并获取回复
         /// <param name="messagesHistory">完整历史消息列表</param>
         /// <returns>AI的回复消息</returns>
         public async Task<string> SendMessageAsync(List<ChatMessage> messagesHistory)
@@ -60,7 +59,7 @@ namespace OpenMeido
 
                 var messages = new List<Dictionary<string, object>>();
 
-                // 如果有系统提示词，先添加系统消息
+                // 系统提示词
                 if (!string.IsNullOrWhiteSpace(settings.SystemPrompt))
                 {
                     messages.Add(new Dictionary<string, object>
@@ -70,7 +69,7 @@ namespace OpenMeido
                     });
                 }
 
-                // 添加历史消息
+                // 历史消息
                 foreach (var msg in messagesHistory)
                 {
                     messages.Add(new Dictionary<string, object>
@@ -113,10 +112,10 @@ namespace OpenMeido
                 // 检查响应状态码
                 if (!response.IsSuccessStatusCode)
                 {
-                    // 如果请求失败，返回详细错误信息
+                    // 如果请求失败，返回错误信息
                     string errorDetail = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
 
-                    // 根据状态码提供更具体的错误信息
+                    // 根据状态码提供具体错误
                     switch (response.StatusCode)
                     {
                         case System.Net.HttpStatusCode.Unauthorized:
@@ -128,7 +127,7 @@ namespace OpenMeido
                         case System.Net.HttpStatusCode.NotFound:
                             errorDetail += "\n❌ 接口不存在：请检查API基础URL是否正确";
                             break;
-                        case (System.Net.HttpStatusCode)429: // TooManyRequests 在 .NET Framework 4.7.2 中不存在，使用数字代码
+                        case (System.Net.HttpStatusCode)429: // TooManyRequests 在 .NET Framework 4.7.2 中不存在
                             errorDetail += "\n❌ 请求过于频繁：请稍后重试";
                             break;
                         case System.Net.HttpStatusCode.InternalServerError:
@@ -271,7 +270,7 @@ namespace OpenMeido
         }
 
         /// 测试API连接是否正常
-        /// <returns>如果连接成功返回true，否则返回false</returns>
+        /// 如果连接成功返回true，否则返回false
         public async Task<bool> TestConnectionAsync()
         {
             try

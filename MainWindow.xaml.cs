@@ -25,6 +25,7 @@ using System.Windows.Media.Imaging;
 using System.Linq;
 // 引入任务以便异步等待关闭动画完成
 using System.Threading.Tasks;
+using System.Windows.Controls.Primitives;
 
 // 定义OpenMeido命名空间，用于组织和封装项目中的所有类
 namespace OpenMeido
@@ -65,14 +66,15 @@ namespace OpenMeido
         private bool _isClosingAnimationRunning = false;
 
         //迷你聊天相关字段
-        private bool _isMiniChatOpen = false;          // 迷你聊天栏是否打开
-        private int _miniChatRoundCount = 0;           // 对话轮次计数
+        private bool _isMiniChatOpen = false;          // 迷你聊天是否打开
+        private int _miniChatRoundCount = 0;           // 对话轮次
         private Border _miniChatContainer;             // 聊天UI容器
         private TextBox _miniChatInput;                // 输入框
-        private StackPanel _miniChatPanel;             // 用于显示问答气泡
+        private StackPanel _miniChatPanel;             // 显示问答气泡
         private ApiService _miniApiService;            // 复用 ApiService
         private AppSettings _miniSettings;             // 设置
         private List<ChatMessage> _miniChatHistory = new List<ChatMessage>();
+        private Popup _miniChatPopup;                  // Popup 用于承载迷你聊天框
 
         // 妹抖酱待机/聊天图片路径常量
         private const string MeidoStandbyImagePath = "Assets/Meido/Meido_standby.png";
@@ -136,7 +138,6 @@ namespace OpenMeido
             this.MouseLeave += WindowHider;
 
             // 使用集合初始化语法创建并初始化菜单项列表
-            // 这种语法是C# 3.0引入的语法糖，使代码更简洁易读
             menuItems = new List<RadialMenuItem>
             {
                 // 创建记事本菜单项，使用对象初始化语法设置属性
@@ -373,15 +374,9 @@ namespace OpenMeido
                 _radialMenu.Regenerate();
             }
 
-            // 在 MainCanvas 清空并重新添加中心妹抖图像后，若迷你聊天栏开启则一并重新添加
-            if (_isMiniChatOpen && _miniChatContainer != null)
+            // 在 MainCanvas 清空并重新添加中心妹抖图像后，如果迷你聊天开启则只需重新定位 Popup
+            if (_isMiniChatOpen)
             {
-                if (!MainCanvas.Children.Contains(_miniChatContainer))
-                {
-                    MainCanvas.Children.Add(_miniChatContainer);
-                }
-
-                // 重新计算聊天栏位置，以防窗口大小或布局变化
                 PositionMiniChat();
             }
         }
@@ -415,10 +410,10 @@ namespace OpenMeido
             double centerY = ActualHeight / 2;
 
             // 使用三角函数将极坐标转换为直角坐标
-            // Math.Cos(angle)计算X轴分量，Math.Sin(angle)计算Y轴分量
+            // Cos计算X轴分量，Sin(angle)计算Y轴分量
             return new Point(
-                centerX + radius * Math.Cos(angle),  // X坐标 = 圆心X + 半径 * cos(角度)
-                centerY + radius * Math.Sin(angle)   // Y坐标 = 圆心Y + 半径 * sin(角度)
+                centerX + radius * Math.Cos(angle),
+                centerY + radius * Math.Sin(angle)
             );
         }
 
@@ -454,10 +449,9 @@ namespace OpenMeido
         private void ExecuteCommand(ICommand command)
         {
             // 使用if-else链检查命令类型并执行相应操作
-            // 这种方式简单直接，适合命令数量较少的情况
             if (command == MenuCommands.OpenNotepad)
             {
-                // 启动Windows记事本程序
+                // 启动记事本
                 // Process.Start是.NET中启动外部程序的标准方法
                 Process.Start("notepad.exe");
             }
@@ -480,8 +474,8 @@ namespace OpenMeido
                 command.Execute(null);
             }
 
-            // 执行命令后隐藏窗口，提供良好的用户体验
-            // 用户选择操作后菜单自动消失，避免界面混乱
+            // 执行命令后隐藏窗口
+            // 用户选择操作后菜单自动消失
             Hide();
         }
 
@@ -537,7 +531,7 @@ namespace OpenMeido
                 var settingsWindow = new SettingsWindow();
 
                 // 以模态对话框形式显示
-                // 确保用户必须完成设置操作后才能继续
+                // 确保用户完成设置操作后才能继续
                 settingsWindow.ShowDialog();
                 
                 // 设置窗口关闭后，恢复主窗口状态
@@ -835,12 +829,28 @@ namespace OpenMeido
         /// 创建并显示迷你聊天栏
         private void ShowMiniChat()
         {
+            // 展开迷你聊天时，重置窗口内容偏移
+            _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
+            _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
+            _contentShift.X = 0;
+            _contentShift.Y = 0;
+
+            if (_miniChatPopup == null)
+            {
+                _miniChatPopup = new Popup
+                {
+                    AllowsTransparency = true,
+                    PlacementTarget = MainCanvas,
+                    Placement = PlacementMode.Relative,
+                    StaysOpen = true
+                };
+            }
+
             if (_miniChatContainer == null)
             {
                 // 初始化 UI 组件
                 _miniChatContainer = new Border
                 {
-                    // 让迷你聊天栏本身完全透明，只留下内部的气泡
                     Background = Brushes.Transparent,
                     BorderBrush = Brushes.Transparent,
                     BorderThickness = new Thickness(0),
@@ -871,27 +881,29 @@ namespace OpenMeido
                 root.Children.Add(_miniChatInput);
                 _miniChatContainer.Child = root;
 
+                // 大小变化时重新定位
                 _miniChatContainer.SizeChanged += (_, __) => PositionMiniChat();
             }
 
+            // 将 Border 作为 Popup 的 Child
+            _miniChatPopup.Child = _miniChatContainer;
+
+            // 确保迷你聊天容器可见（可能在打开设置/聊天页面后被隐藏）
+            _miniChatContainer.Visibility = Visibility.Visible;
+
+            // 首次或重新打开时重新定位
             PositionMiniChat();
 
-            if (!MainCanvas.Children.Contains(_miniChatContainer))
-            {
-                MainCanvas.Children.Add(_miniChatContainer);
-            }
-
+            _miniChatPopup.IsOpen = true;
             _miniChatInput.Focus();
-
-            // 确保输入框为空，开始新的对话
             _miniChatInput.Clear();
-
             _isMiniChatOpen = true;
 
             SetMeidoImage(MeidoChattingImagePath);
+            PositionMeidoInCenter();
 
-            // 重新排布按钮到左半圆
-            GenerateRadialButtons();
+            // 带动画效果重新排布按钮到左半圆
+            _radialMenu?.RegenerateWithAnimation(true);
 
             // 初始化 ApiService
             if (_miniApiService == null)
@@ -907,54 +919,37 @@ namespace OpenMeido
         /// 隐藏并清理迷你聊天栏
         private void HideMiniChat()
         {
-            if (_miniChatContainer != null && MainCanvas.Children.Contains(_miniChatContainer))
+            if (_miniChatPopup != null)
             {
-                MainCanvas.Children.Remove(_miniChatContainer);
+                _miniChatPopup.IsOpen = false;
             }
 
             _isMiniChatOpen = false;
             _miniChatRoundCount = 0;
 
-            // 清空迷你聊天历史与界面，避免下次打开时显示旧对话
-            if (_miniChatPanel != null)
-            {
-                _miniChatPanel.Children.Clear();
-            }
-
+            // 清空迷你聊天历史与界面
+            _miniChatPanel?.Children.Clear();
             _miniChatHistory.Clear();
 
             SetMeidoImage(MeidoStandbyImagePath);
 
-            GenerateRadialButtons(); // 恢复完整圆形布局
+            // 恢复完整圆形布局
+            _radialMenu?.RegenerateWithAnimation(false);
         }
 
         /// 根据妹抖酱位置计算聊天栏放置位置
         private void PositionMiniChat()
         {
-            if (MeidoImage == null || _miniChatContainer == null) return;
+            if (MeidoImage == null || _miniChatContainer == null || _miniChatPopup == null) return;
 
-            double meidoLeft = Canvas.GetLeft(MeidoImage);
-            double meidoTop = Canvas.GetTop(MeidoImage);
+            // 获取妹抖酱在 Canvas 中的坐标
+            Point meidoPos = MeidoImage.TranslatePoint(new Point(0, 0), MainCanvas);
 
-            double chatLeft = meidoLeft + MeidoImage.Width + 12; // 默认右侧偏移
-            double chatTop = meidoTop + (MeidoImage.Height - _miniChatContainer.ActualHeight) / 2;
+            double chatLeft = meidoPos.X + MeidoImage.Width + 12;
+            double chatTop = meidoPos.Y + (MeidoImage.Height - _miniChatContainer.ActualHeight) / 2;
 
-            // 计算所需窗口大小，确保聊天框完整可见
-            double requiredRight = chatLeft + _miniChatContainer.ActualWidth + 10; // 额外 10px 边距
-            if (requiredRight > Width)
-            {
-                Width = requiredRight;
-            }
-
-            // 防止顶部和底部超出窗口可视区域
-            if (chatTop < 10) chatTop = 10;
-            if (chatTop + _miniChatContainer.ActualHeight > ActualHeight)
-            {
-                chatTop = ActualHeight - _miniChatContainer.ActualHeight - 10;
-            }
-
-            Canvas.SetLeft(_miniChatContainer, chatLeft);
-            Canvas.SetTop(_miniChatContainer, chatTop);
+            _miniChatPopup.HorizontalOffset = chatLeft;
+            _miniChatPopup.VerticalOffset = chatTop;
         }
 
         /// 发送迷你聊天消息
@@ -975,7 +970,7 @@ namespace OpenMeido
                 return;
             }
 
-            // 发送完整历史（含本次用户消息）
+            // 发送完整历史（含本次）
             string reply = await _miniApiService.SendMessageAsync(new List<ChatMessage>(_miniChatHistory));
 
             // 显示 AI 回复 ( /// 分句)
@@ -1024,7 +1019,7 @@ namespace OpenMeido
             bubble.Child = txt;
             _miniChatPanel.Children.Add(bubble);
 
-            // 保持最多7条气泡，避免过长
+            // 保持最多7条气泡
             if (_miniChatPanel.Children.Count > 7)
             {
                 _miniChatPanel.Children.RemoveAt(0);
