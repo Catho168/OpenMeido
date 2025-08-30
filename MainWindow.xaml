@@ -16,5 +16,29 @@
                Height="83"
                Style="{StaticResource MeidoImageStyle}"
                Canvas.Left="110" Canvas.Top="110"/>
+
+        <!-- MCP状态指示器 -->
+        <Border x:Name="McpStatusIndicator"
+                Background="#E0FFFFFF"
+                BorderBrush="#CCCCCC"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="5,2"
+                Canvas.Left="10" Canvas.Top="10"
+                Visibility="Collapsed"
+                ToolTip="MCP服务器状态">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse x:Name="McpStatusDot"
+                         Width="8" Height="8"
+                         Fill="Gray"
+                         VerticalAlignment="Center"
+                         Margin="0,0,5,0"/>
+                <TextBlock x:Name="McpStatusText"
+                           Text="MCP: 0/0"
+                           FontSize="10"
+                           Foreground="#333"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
     </Canvas>
 </Window>

@@ -2,9 +2,7 @@
 using System.Runtime.InteropServices;
 // WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
 using System.Windows.Interop;
-// 3D媒体功能
 using System.Windows.Media.Media3D;
-// WPF核心
 using System.Windows;
 using System;
 // 进程管理功能，用于启动外部程序
@@ -75,6 +73,10 @@ namespace OpenMeido
         private AppSettings _miniSettings;             // 设置
         private List<ChatMessage> _miniChatHistory = new List<ChatMessage>();
         private Popup _miniChatPopup;                  // Popup 用于承载迷你聊天框
+
+        // MCP状态监控相关字段
+        private System.Windows.Threading.DispatcherTimer _mcpStatusTimer;
+        private McpService _mcpService;
 
         // 妹抖酱待机/聊天图片路径常量
         private const string MeidoStandbyImagePath = "Assets/Meido/Meido_standby.png";
@@ -198,6 +200,9 @@ namespace OpenMeido
             {
                 MeidoImage.MouseLeftButtonDown += (_, __) => ToggleMiniChat();
             }
+
+            // 初始化MCP状态监控
+            InitializeMcpStatusMonitoring();
         }
 
         // 窗口隐藏事件处理器，当鼠标离开窗口时自动隐藏窗口
@@ -271,6 +276,9 @@ namespace OpenMeido
             // 取消注册热键，释放系统资源
             // 全局热键是系统级资源，不释放会导致资源泄漏
             UnregisterHotKey(hwnd, HOTKEY_ID);
+
+            // 清理MCP资源
+            CleanupMcpResources();
         }
 
         // Windows消息钩子处理函数，处理系统发送给窗口的消息
@@ -654,7 +662,7 @@ namespace OpenMeido
             }
         }
 
-        /// 女仆悬停动画效果
+        /// 女仆悬停动画
         private void AnimateMeidoHover(bool isHovering)
         {
             if (MeidoImage != null)
@@ -799,7 +807,7 @@ namespace OpenMeido
             _contentShift.BeginAnimation(TranslateTransform.XProperty, shiftAnimX);
             _contentShift.BeginAnimation(TranslateTransform.YProperty, shiftAnimY);
 
-            // 等待动画完成后清除动画并重置位移，确保下次打开正常
+            // 等待动画完成后清除动画并重置位移
             await Task.Delay(durationMs + 20);
             _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
             _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
@@ -813,7 +821,7 @@ namespace OpenMeido
 
         #region 迷你聊天实现
 
-        /// 切换迷你聊天栏显示/隐藏
+        /// 切换迷你聊天栏显隐
         private void ToggleMiniChat()
         {
             if (_isMiniChatOpen)
@@ -912,6 +920,23 @@ namespace OpenMeido
                 if (_miniSettings.IsValid())
                 {
                     _miniApiService = new ApiService(_miniSettings);
+
+                    // 异步初始化MCP服务
+                    if (_miniSettings.EnableMcp)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _miniApiService.InitializeMcpAsync();
+                                System.Diagnostics.Debug.WriteLine("迷你聊天MCP服务初始化完成");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"迷你聊天MCP服务初始化失败: {ex.Message}");
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -933,7 +958,7 @@ namespace OpenMeido
 
             SetMeidoImage(MeidoStandbyImagePath);
 
-            // 恢复完整圆形布局
+            // 恢复圆形布局
             _radialMenu?.RegenerateWithAnimation(false);
         }
 
@@ -1026,10 +1051,122 @@ namespace OpenMeido
             }
         }
 
-        /// 分割 AI 回复
         private List<string> SplitAiMessage(string message)
         {
             return message.Split(new string[] { @"\\\" }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        #endregion
+
+        #region MCP状态监控
+
+        /// 初始化MCP状态监控
+        private void InitializeMcpStatusMonitoring()
+        {
+            try
+            {
+                // 加载设置并初始化MCP服务
+                var settings = AppSettings.Load();
+                if (settings.EnableMcp)
+                {
+                    _mcpService = new McpService(settings);
+
+                    // 异步初始化MCP服务
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _mcpService.InitializeAsync();
+
+                            // 在UI线程上更新状态
+                            Dispatcher.Invoke(() =>
+                            {
+                                UpdateMcpStatusDisplay();
+                                McpStatusIndicator.Visibility = Visibility.Visible;
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"MCP服务初始化失败: {ex.Message}");
+                        }
+                    });
+
+                    // 启动状态更新定时器
+                    _mcpStatusTimer = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromSeconds(10)
+                    };
+                    _mcpStatusTimer.Tick += (sender, e) => UpdateMcpStatusDisplay();
+                    _mcpStatusTimer.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"初始化MCP状态监控失败: {ex.Message}");
+            }
+        }
+
+        /// 更新MCP状态显示
+        private void UpdateMcpStatusDisplay()
+        {
+            try
+            {
+                if (_mcpService == null)
+                {
+                    McpStatusIndicator.Visibility = Visibility.Collapsed;
+                    return;
+                }
+
+                var serverStatuses = _mcpService.GetServerStatus();
+                var connectedCount = serverStatuses.Count(s => s.IsConnected);
+                var totalCount = serverStatuses.Count;
+                var totalTools = serverStatuses.Where(s => s.IsConnected).Sum(s => s.ToolCount);
+
+                // 更新状态文本
+                McpStatusText.Text = $"MCP: {connectedCount}/{totalCount} ({totalTools}工具)";
+
+                // 更新状态指示器颜色
+                if (connectedCount == 0)
+                {
+                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xD6, 0x58, 0x59)); // 主题色深色
+                    McpStatusIndicator.ToolTip = "MCP: 无连接";
+                }
+                else if (connectedCount == totalCount)
+                {
+                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xE8, 0x74, 0x75)); // 主题色
+                    McpStatusIndicator.ToolTip = $"MCP: 全部连接 ({totalTools} 个工具可用)";
+                }
+                else
+                {
+                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xF0, 0xA0, 0xA1)); // 主题色浅色
+                    McpStatusIndicator.ToolTip = $"MCP: 部分连接 ({connectedCount}/{totalCount} 服务器, {totalTools} 个工具)";
+                }
+
+                // 显示状态指示器
+                McpStatusIndicator.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"更新MCP状态显示失败: {ex.Message}");
+                McpStatusIndicator.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// 清理MCP资源
+        private void CleanupMcpResources()
+        {
+            try
+            {
+                _mcpStatusTimer?.Stop();
+                _mcpStatusTimer = null;
+
+                _mcpService?.Dispose();
+                _mcpService = null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"清理MCP资源失败: {ex.Message}");
+            }
         }
 
         #endregion

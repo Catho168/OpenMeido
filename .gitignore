@@ -362,5 +362,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Visual Studio аый╠нд╪Ч╪п
+# Visual Studio О©╫О©╫й╠О©╫д╪О©╫О©╫О©╫
 .vs/
+
+.comate/
+.lingma/
+.roo/
