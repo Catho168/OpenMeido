@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using System.Windows.Data;
 using ModelContextProtocol.Client;
 
 namespace OpenMeido
@@ -299,7 +300,7 @@ namespace OpenMeido
             // 检查是否包含工具执行相关的特殊标记
             if (IsToolExecutionMessage(message))
             {
-                AddToolExecutionMessage(message);
+                AddMcpToolCallBar(message, true); // 主聊天界面支持详细视图
             }
             else
             {
@@ -327,230 +328,498 @@ namespace OpenMeido
         /// <returns>是否为工具执行消息</returns>
         private bool IsToolExecutionMessage(string message)
         {
-            return message.Contains("🔧 正在调用工具:") ||
-                   message.Contains("✅ 工具执行结果:") ||
-                   message.Contains("❌ 工具调用失败:") ||
-                   message.Contains("🔍 MCP工具详情:") ||
-                   message.Contains("⏱️ 工具执行时间:") ||
-                   message.Contains("📊 MCP服务器:");
+            return message.Contains("TOOL_CALL_START:") ||
+                   message.Contains("TOOL_PARAMS:") ||
+                   message.Contains("TOOL_RESULT_SUCCESS:") ||
+                   message.Contains("TOOL_RESULT_FAILED:") ||
+                   message.Contains("TOOL_CALL_END");
         }
 
-        /// 添加工具执行消息，使用特殊样式和增强的可视化
-        /// <param name="message">工具执行消息</param>
-        private void AddToolExecutionMessage(string message)
+        /// 添加工具调用信息条（类似聊天软件的系统消息）
+        /// <param name="message">工具调用消息</param>
+        /// <param name="isDetailedView">是否为详细视图（主聊天界面）</param>
+        private void AddMcpToolCallBar(string message, bool isDetailedView = true)
         {
-            // 创建主容器
-            var mainBorder = new Border
+            var toolCallData = ParseToolCallMessage(message);
+            if (toolCallData == null) return;
+
+            // 创建居中的信息条容器
+            var containerBorder = new Border
             {
-                Style = (Style)FindResource("AiMessageStyle"),
-                Background = new SolidColorBrush(Color.FromRgb(240, 248, 255)), // 淡蓝色背景
-                BorderBrush = new SolidColorBrush(Color.FromRgb(173, 216, 230)), // 浅蓝色边框
-                BorderThickness = new Thickness(2),
-                CornerRadius = new CornerRadius(10),
-                Margin = new Thickness(10, 5, 50, 5),
-                Effect = new DropShadowEffect
+                Background = Brushes.Transparent,
+                Margin = new Thickness(0, 8, 0, 8),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // 创建信息条
+            var messageBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(220, 220, 220)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(15),
+                Padding = new Thickness(12, 6, 12, 6),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                MaxWidth = 300
+            };
+
+            // 创建文本内容
+            var textBlock = new TextBlock
+            {
+                Text = $"妹抖酱调用了 {toolCallData.ToolName} 工具",
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(102, 102, 102)),
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            // 如果是详细视图（主聊天界面），添加点击事件
+            if (isDetailedView)
+            {
+                messageBorder.Cursor = Cursors.Hand;
+                messageBorder.ToolTip = "点击查看详情";
+                
+                // 添加悬停效果
+                messageBorder.MouseEnter += (s, e) =>
                 {
-                    Color = Colors.LightBlue,
-                    Direction = 315,
-                    ShadowDepth = 2,
-                    BlurRadius = 4,
-                    Opacity = 0.3
-                }
-            };
+                    messageBorder.Background = new SolidColorBrush(Color.FromRgb(235, 235, 235));
+                };
+                messageBorder.MouseLeave += (s, e) =>
+                {
+                    messageBorder.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
+                };
+                
+                // 添加点击事件用于展开详情
+                messageBorder.MouseLeftButtonDown += (s, e) =>
+                {
+                    ShowToolCallDetails(toolCallData);
+                };
+            }
 
-            // 创建内容面板
-            var contentPanel = new StackPanel
-            {
-                Margin = new Thickness(12, 8, 12, 8)
-            };
-
-            // 解析消息内容并创建相应的UI元素
-            ParseAndDisplayToolMessage(message, contentPanel);
-
-            mainBorder.Child = contentPanel;
-            MessagesPanel.Children.Add(mainBorder);
+            messageBorder.Child = textBlock;
+            containerBorder.Child = messageBorder;
+            MessagesPanel.Children.Add(containerBorder);
         }
 
-        /// 解析工具消息并创建相应的UI显示
-        /// <param name="message">工具消息内容</param>
-        /// <param name="container">容器面板</param>
-        private void ParseAndDisplayToolMessage(string message, StackPanel container)
+        /// 解析工具调用消息
+        /// <param name="message">工具调用消息</param>
+        /// <returns>工具调用数据</returns>
+        private ToolCallData ParseToolCallMessage(string message)
         {
             var lines = message.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
+            var toolCallData = new ToolCallData();
+            
             foreach (var line in lines)
             {
                 var trimmedLine = line.Trim();
-                if (string.IsNullOrEmpty(trimmedLine)) continue;
-
-                if (trimmedLine.StartsWith("🔧 正在调用工具:"))
+                if (trimmedLine.StartsWith("TOOL_CALL_START:"))
                 {
-                    AddToolHeaderDisplay(trimmedLine, container);
+                    toolCallData.ToolName = trimmedLine.Substring("TOOL_CALL_START:".Length).Trim();
                 }
-                else if (trimmedLine.StartsWith("   参数:"))
+                else if (trimmedLine.StartsWith("TOOL_PARAMS:"))
                 {
-                    AddToolParametersDisplay(trimmedLine, container);
+                    toolCallData.Parameters = trimmedLine.Substring("TOOL_PARAMS:".Length).Trim();
                 }
-                else if (trimmedLine.StartsWith("   状态:"))
+                else if (trimmedLine.StartsWith("TOOL_RESULT_SUCCESS:"))
                 {
-                    AddToolStatusDisplay(trimmedLine, container);
+                    toolCallData.Result = trimmedLine.Substring("TOOL_RESULT_SUCCESS:".Length).Trim();
+                    toolCallData.IsSuccess = true;
                 }
-                else if (trimmedLine.StartsWith("✅ 工具执行结果:"))
+                else if (trimmedLine.StartsWith("TOOL_RESULT_FAILED:"))
                 {
-                    AddToolResultDisplay(trimmedLine, container, true);
-                }
-                else if (trimmedLine.StartsWith("❌ 工具调用失败:"))
-                {
-                    AddToolResultDisplay(trimmedLine, container, false);
-                }
-                else
-                {
-                    // 普通文本行
-                    AddToolTextDisplay(trimmedLine, container);
+                    toolCallData.Result = trimmedLine.Substring("TOOL_RESULT_FAILED:".Length).Trim();
+                    toolCallData.IsSuccess = false;
                 }
             }
+            
+            return string.IsNullOrEmpty(toolCallData.ToolName) ? null : toolCallData;
         }
 
-        /// 添加工具标题显示
-        private void AddToolHeaderDisplay(string text, StackPanel container)
+        /// 显示工具调用详情对话框
+        /// <param name="toolCallData">工具调用数据</param>
+        private void ShowToolCallDetails(ToolCallData toolCallData)
         {
-            var headerPanel = new StackPanel
+            // 创建现代化的小信息弹窗
+            var detailsWindow = new Window
+            {
+                Title = "工具调用详情",
+                Width = 480,
+                Height = 420,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = Brushes.Transparent,
+                ShowInTaskbar = false,
+                UseLayoutRounding = true,  // 启用布局舍入以提高渲染清晰度
+                SnapsToDevicePixels = true // 启用像素对齐以提高渲染清晰度
+            };
+            // 主容器，带圆角和阴影效果
+            var mainBorder = new Border
+            {
+                Background = Brushes.White,
+                CornerRadius = new CornerRadius(12),
+                BorderBrush = new SolidColorBrush(GetThemeUIColor("success")),
+                BorderThickness = new Thickness(2),
+                Effect = new DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    Direction = 315,
+                    ShadowDepth = 8,
+                    BlurRadius = 15,
+                    Opacity = 0.3
+                },
+                Margin = new Thickness(10, 10, 10, 10), // 为阴影留出空间
+                UseLayoutRounding = true,  // 启用布局舍入以提高渲染清晰度
+                SnapsToDevicePixels = true // 启用像素对齐以提高渲染清晰度
+            };
+            var mainGrid = new Grid();
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(45) }); // 标题栏
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容区域
+            mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 按钮区域
+
+            // 标题栏
+            var titleBar = new Border
+            {
+                Background = new SolidColorBrush(GetThemeUIColor("success")),
+                CornerRadius = new CornerRadius(10, 10, 0, 0)
+            };
+            Grid.SetRow(titleBar, 0);
+
+            var titleGrid = new Grid();
+            titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            titleGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var titleContent = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 5)
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(15, 0, 0, 0),
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
             };
-
-            var iconText = new TextBlock
+            titleContent.Children.Add(new TextBlock
             {
                 Text = "🔧",
                 FontSize = 16,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 8, 0),
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            });
+            titleContent.Children.Add(new TextBlock
+            {
+                Text = "工具调用详情",
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            });
+            Grid.SetColumn(titleContent, 0);
 
-            var toolNameText = new TextBlock
+            // 关闭按钮（X）
+            var closeBtn = new Button
             {
-                Text = text.Substring(text.IndexOf(":") + 1).Trim(),
+                Content = "✕",
+                Width = 35,
+                Height = 30,
+                Background = Brushes.Transparent,
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0),
+                FontSize = 14,
                 FontWeight = FontWeights.Bold,
-                FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(25, 25, 112)),
-                VerticalAlignment = VerticalAlignment.Center
+                Cursor = Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"]
             };
+            closeBtn.Click += (s, e) => detailsWindow.Close();
+            
+            // 悬停效果
+            closeBtn.MouseEnter += (s, e) => closeBtn.Background = new SolidColorBrush(Color.FromArgb(100, 255, 255, 255));
+            closeBtn.MouseLeave += (s, e) => closeBtn.Background = Brushes.Transparent;
+            
+            Grid.SetColumn(closeBtn, 1);
 
-            headerPanel.Children.Add(iconText);
-            headerPanel.Children.Add(toolNameText);
-            container.Children.Add(headerPanel);
-        }
+            titleGrid.Children.Add(titleContent);
+            titleGrid.Children.Add(closeBtn);
+            titleBar.Child = titleGrid;
 
-        /// 添加工具参数显示
-        private void AddToolParametersDisplay(string text, StackPanel container)
-        {
-            var paramText = new TextBlock
+            // 内容区域
+            var contentScrollViewer = new ScrollViewer
             {
-                Text = text,
-                FontFamily = new FontFamily("Consolas, 'Courier New', monospace"),
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(70, 70, 70)),
-                Margin = new Thickness(24, 2, 0, 2),
-                TextWrapping = TextWrapping.Wrap
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Padding = new Thickness(20, 15, 20, 0)
             };
+            Grid.SetRow(contentScrollViewer, 1);
 
-            container.Children.Add(paramText);
-        }
+            var contentPanel = new StackPanel();
 
-        /// 添加工具状态显示
-        private void AddToolStatusDisplay(string text, StackPanel container)
-        {
-            var statusPanel = new StackPanel
+            // 工具名称
+            var toolNamePanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(24, 2, 0, 5)
+                Margin = new Thickness(0, 0, 0, 18),
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
             };
-
-            var statusText = new TextBlock
+            toolNamePanel.Children.Add(new TextBlock
             {
-                Text = text.Substring(text.IndexOf(":") + 1).Trim(),
-                FontSize = 11,
-                FontStyle = FontStyles.Italic,
-                Foreground = new SolidColorBrush(Color.FromRgb(100, 100, 100))
-            };
-
-            // 添加动画效果（如果是执行中状态）
-            if (text.Contains("执行中"))
+                Text = "⚙️",
+                FontSize = 14,
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            });
+            toolNamePanel.Children.Add(new TextBlock
             {
-                var loadingDot = new TextBlock
+                Text = "工具名称:",
+                FontSize = 13,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(85, 85, 85)),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0),
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            });
+            toolNamePanel.Children.Add(new TextBlock
+            {
+                Text = toolCallData.ToolName,
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(GetThemeUIColor("success")),
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            });
+            contentPanel.Children.Add(toolNamePanel);
+
+            // 参数信息
+            if (!string.IsNullOrEmpty(toolCallData.Parameters))
+            {
+                var paramLabel = new StackPanel
                 {
-                    Text = "●",
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 0, 0, 8),
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                };
+                paramLabel.Children.Add(new TextBlock
+                {
+                    Text = "📋",
                     FontSize = 12,
-                    Foreground = new SolidColorBrush(GetThemeUIColor("processing")),
-                    Margin = new Thickness(5, 0, 0, 0),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-
-                // 添加闪烁动画
-                var animation = new System.Windows.Media.Animation.DoubleAnimation
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
+                paramLabel.Children.Add(new TextBlock
                 {
-                    From = 1.0,
-                    To = 0.3,
-                    Duration = TimeSpan.FromMilliseconds(800),
-                    AutoReverse = true,
-                    RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
-                };
-
-                loadingDot.BeginAnimation(UIElement.OpacityProperty, animation);
-                statusPanel.Children.Add(loadingDot);
+                    Text = "调用参数:",
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(85, 85, 85)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
+                contentPanel.Children.Add(paramLabel);
+                
+                contentPanel.Children.Add(new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(250, 250, 250)),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(12, 10, 12, 10),
+                    Margin = new Thickness(0, 0, 0, 18),
+                    Child = new TextBlock
+                    {
+                        Text = toolCallData.Parameters,
+                        FontFamily = new FontFamily("Consolas, 'Courier New', monospace"),
+                        FontSize = 11,
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = new SolidColorBrush(Color.FromRgb(51, 51, 51)),
+                        LineHeight = 16,
+                        UseLayoutRounding = true,
+                        SnapsToDevicePixels = true
+                    },
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
             }
 
-            statusPanel.Children.Add(statusText);
-            container.Children.Add(statusPanel);
-        }
+            // 执行结果
+            if (!string.IsNullOrEmpty(toolCallData.Result))
+            {
+                var resultIcon = toolCallData.IsSuccess ? "✅" : "❌";
+                var resultTitle = toolCallData.IsSuccess ? "执行结果" : "执行错误";
+                var resultColor = toolCallData.IsSuccess ? GetThemeUIColor("success") : GetThemeUIColor("error");
+                var resultBgColor = toolCallData.IsSuccess ? GetThemeUIColor("background_success") : GetThemeUIColor("background_error");
+                var resultBorderColor = toolCallData.IsSuccess ? GetThemeUIColor("border_success") : GetThemeUIColor("border_error");
+                
+                var resultLabel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 0, 0, 8),
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                };
+                resultLabel.Children.Add(new TextBlock
+                {
+                    Text = resultIcon,
+                    FontSize = 12,
+                    Margin = new Thickness(0, 0, 6, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
+                resultLabel.Children.Add(new TextBlock
+                {
+                    Text = $"{resultTitle}:",
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(resultColor),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
+                contentPanel.Children.Add(resultLabel);
+                
+                contentPanel.Children.Add(new Border
+                {
+                    Background = new SolidColorBrush(resultBgColor),
+                    BorderBrush = new SolidColorBrush(resultBorderColor),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(12, 10, 12, 10),
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Child = new ScrollViewer
+                    {
+                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                        MaxHeight = 150,
+                        Content = new TextBlock
+                        {
+                            Text = toolCallData.Result,
+                            FontSize = 11,
+                            TextWrapping = TextWrapping.Wrap,
+                            Foreground = new SolidColorBrush(Color.FromRgb(51, 51, 51)),
+                            LineHeight = 16,
+                            FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                            UseLayoutRounding = true,
+                            SnapsToDevicePixels = true
+                        },
+                        UseLayoutRounding = true,
+                        SnapsToDevicePixels = true
+                    },
+                    UseLayoutRounding = true,
+                    SnapsToDevicePixels = true
+                });
+            }
 
-        /// 添加工具结果显示
-        private void AddToolResultDisplay(string text, StackPanel container, bool isSuccess)
-        {
-            var resultPanel = new StackPanel
+            contentScrollViewer.Content = contentPanel;
+
+            // 底部按钮区域
+            var buttonPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 5, 0, 0)
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(20, 15, 20, 20),
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
             };
+            Grid.SetRow(buttonPanel, 2);
 
-            var iconText = new TextBlock
+            var okButton = new Button
             {
-                Text = isSuccess ? "✅" : "❌",
-                FontSize = 14,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            };
-
-            var resultText = new TextBlock
-            {
-                Text = text.Substring(text.IndexOf(":") + 1).Trim(),
+                Content = "确定",
+                Width = 90,
+                Height = 32,
+                Background = new SolidColorBrush(GetThemeUIColor("success")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(isSuccess ? GetThemeUIColor("success") : GetThemeUIColor("error")),
-                VerticalAlignment = VerticalAlignment.Center,
-                TextWrapping = TextWrapping.Wrap
-            };
+                Cursor = Cursors.Hand,
+                FontFamily = (FontFamily)Application.Current.Resources["GlobalFontFamily"],
+                UseLayoutRounding = true,
+                SnapsToDevicePixels = true
+            };            
+            // 简单的圆角样式
+            var buttonStyle = new Style(typeof(Button));
+            var template = new ControlTemplate(typeof(Button));
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Button.BackgroundProperty));
+            border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Button.BorderBrushProperty));
+            border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Button.BorderThicknessProperty));
+            
+            var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentPresenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            contentPresenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(contentPresenter);
+            
+            template.VisualTree = border;
+            buttonStyle.Setters.Add(new Setter(Button.TemplateProperty, template));
+            okButton.Style = buttonStyle;
+            
+            // 悬停效果
+            okButton.MouseEnter += (s, e) => okButton.Background = new SolidColorBrush(GetThemeUIColor("processing"));
+            okButton.MouseLeave += (s, e) => okButton.Background = new SolidColorBrush(GetThemeUIColor("success"));
+            
+            okButton.Click += (s, e) => detailsWindow.Close();
+            buttonPanel.Children.Add(okButton);
 
-            resultPanel.Children.Add(iconText);
-            resultPanel.Children.Add(resultText);
-            container.Children.Add(resultPanel);
-        }
+            mainGrid.Children.Add(titleBar);
+            mainGrid.Children.Add(contentScrollViewer);
+            mainGrid.Children.Add(buttonPanel);
+            mainBorder.Child = mainGrid;
+            detailsWindow.Content = mainBorder;
 
-        /// 添加普通文本显示
-        private void AddToolTextDisplay(string text, StackPanel container)
-        {
-            var textBlock = new TextBlock
+            // 窗口拖拽
+            titleBar.MouseLeftButtonDown += (s, e) =>
             {
-                Text = text,
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(60, 60, 60)),
-                Margin = new Thickness(0, 1, 0, 1),
-                TextWrapping = TextWrapping.Wrap
+                if (e.ButtonState == MouseButtonState.Pressed)
+                {
+                    detailsWindow.DragMove();
+                }
             };
 
-            container.Children.Add(textBlock);
+            // 淡入动画
+            detailsWindow.Opacity = 0;
+            detailsWindow.Show();
+            
+            var fadeInAnimation = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
+            {
+                EasingFunction = new PowerEase { Power = 2, EasingMode = EasingMode.EaseOut }
+            };
+            detailsWindow.BeginAnimation(Window.OpacityProperty, fadeInAnimation);
         }
+
+        /// 工具调用数据类
+        private class ToolCallData
+        {
+            public string ToolName { get; set; } = "";
+            public string Parameters { get; set; } = "";
+            public string Result { get; set; } = "";
+            public bool IsSuccess { get; set; } = false;
+        }
+
+
 
         /// 添加消息到聊天界面，支持多句分割和延时显示
         /// <param name="fullMessage">完整的回复消息</param>

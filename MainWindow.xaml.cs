@@ -1,4 +1,4 @@
-﻿// 系统运行时互操作服务，用于调用Windows API函数
+﻿﻿// 系统运行时互操作服务，用于调用Windows API函数
 using System.Runtime.InteropServices;
 // WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
 using System.Windows.Interop;
@@ -1022,6 +1022,13 @@ namespace OpenMeido
         {
             if (_miniChatPanel == null) return;
 
+            // 检查是否为工具调用消息
+            if (!isUser && IsToolExecutionMessage(msg))
+            {
+                AddMiniToolCallBar(msg);
+                return;
+            }
+
             var bubble = new Border
             {
                 Background = isUser ? ((Brush)Application.Current.TryFindResource("MeidoThemeColor") ?? new SolidColorBrush(Color.FromRgb(0xE8, 0x74, 0x75)))
@@ -1049,6 +1056,87 @@ namespace OpenMeido
             {
                 _miniChatPanel.Children.RemoveAt(0);
             }
+        }
+
+        /// 检查消息是否包含工具执行相关内容（迷你聊天版本）
+        private bool IsToolExecutionMessage(string message)
+        {
+            return message.Contains("TOOL_CALL_START:") ||
+                   message.Contains("TOOL_PARAMS:") ||
+                   message.Contains("TOOL_RESULT_SUCCESS:") ||
+                   message.Contains("TOOL_RESULT_FAILED:") ||
+                   message.Contains("TOOL_CALL_END");
+        }
+
+        /// 在迷你聊天中添加工具调用信息条
+        private void AddMiniToolCallBar(string message)
+        {
+            var toolCallData = ParseMiniToolCallMessage(message);
+            if (toolCallData == null) return;
+
+            // 创建居中的简略信息条
+            var containerBorder = new Border
+            {
+                Background = Brushes.Transparent,
+                Margin = new Thickness(0, 4, 0, 4),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            var messageBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(220, 220, 220)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(8, 4, 8, 4),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                MaxWidth = 160
+            };
+
+            var textBlock = new TextBlock
+            {
+                Text = $"🤖 妹抖酱调用了 {toolCallData.ToolName} 工具",
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(102, 102, 102)),
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            messageBorder.Child = textBlock;
+            containerBorder.Child = messageBorder;
+            _miniChatPanel.Children.Add(containerBorder);
+
+            // 保持最多7条气泡
+            if (_miniChatPanel.Children.Count > 7)
+            {
+                _miniChatPanel.Children.RemoveAt(0);
+            }
+        }
+
+        /// 解析工具调用消息（迷你聊天版本）
+        private MiniToolCallData ParseMiniToolCallMessage(string message)
+        {
+            var lines = message.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var toolCallData = new MiniToolCallData();
+            
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (trimmedLine.StartsWith("TOOL_CALL_START:"))
+                {
+                    toolCallData.ToolName = trimmedLine.Substring("TOOL_CALL_START:".Length).Trim();
+                    break; // 迷你聊天只需要工具名称
+                }
+            }
+            
+            return string.IsNullOrEmpty(toolCallData.ToolName) ? null : toolCallData;
+        }
+
+        /// 迷你工具调用数据类
+        private class MiniToolCallData
+        {
+            public string ToolName { get; set; } = "";
         }
 
         private List<string> SplitAiMessage(string message)

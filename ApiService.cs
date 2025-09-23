@@ -227,48 +227,42 @@ namespace OpenMeido
                 var toolResults = message.Contents.OfType<FunctionResultContent>().ToList();
                 var textContent = message.Contents.OfType<TextContent>().FirstOrDefault();
                 
-                // 如果有工具调用，添加工具调用信息
+                // 如果有工具调用，添加简略的工具调用信息
                 if (toolCalls.Any())
                 {
                     hasToolCalls = true;
                     
                     foreach (var toolCall in toolCalls)
                     {
-                        // 添加工具调用信息
-                        responseBuilder.AppendLine($"🔧 正在调用工具: {toolCall.Name}");
-                        
-                        // 添加参数信息（如果有）
-                        if (toolCall.Arguments != null && toolCall.Arguments.Any())
-                        {
-                            var args = string.Join(", ", toolCall.Arguments.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
-                            responseBuilder.AppendLine($"   参数: {args}");
-                        }
-                        
-                        responseBuilder.AppendLine($"   状态: 执行中...");
-                        
-                        // 查找对应的工具结果
+                        // 查找对应的工具结果来确定执行状态
                         var correspondingResult = response.Messages
                             .SelectMany(m => m.Contents.OfType<FunctionResultContent>())
                             .FirstOrDefault(r => r.CallId == toolCall.CallId);
                             
+                        // 构建简略的工具调用信息，包含详细数据用于展开显示
+                        var toolCallInfo = new StringBuilder();
+                        toolCallInfo.AppendLine($"TOOL_CALL_START:{toolCall.Name}");
+                        
+                        // 添加参数信息（用于详情展开）
+                        if (toolCall.Arguments != null && toolCall.Arguments.Any())
+                        {
+                            var args = string.Join(", ", toolCall.Arguments.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+                            toolCallInfo.AppendLine($"TOOL_PARAMS:{args}");
+                        }
+                        
+                        // 添加执行结果信息
                         if (correspondingResult != null)
                         {
                             var resultContent = correspondingResult.Result?.ToString() ?? "";
-                            
-                            // 限制结果显示长度，避免内容过长
-                            if (resultContent.Length > 200)
-                            {
-                                resultContent = resultContent.Substring(0, 200) + "...";
-                            }
-                            
-                            responseBuilder.AppendLine($"✅ 工具执行结果: {resultContent}");
+                            toolCallInfo.AppendLine($"TOOL_RESULT_SUCCESS:{resultContent}");
                         }
                         else
                         {
-                            responseBuilder.AppendLine($"❌ 工具调用失败: 未找到执行结果");
+                            toolCallInfo.AppendLine($"TOOL_RESULT_FAILED:未找到执行结果");
                         }
                         
-                        responseBuilder.AppendLine(); // 添加空行分隔
+                        toolCallInfo.AppendLine("TOOL_CALL_END");
+                        responseBuilder.Append(toolCallInfo.ToString());
                     }
                 }
             }
