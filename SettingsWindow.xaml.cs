@@ -25,9 +25,6 @@ namespace OpenMeido
         // MCP服务器配置的可观察集合
         private ObservableCollection<McpServerConfig> mcpServers;
 
-        // 当前编辑的MCP服务器配置
-        private McpServerConfig currentEditingServer;
-
         // MCP服务实例，用于测试连接
         private McpService mcpService;
 
@@ -473,38 +470,35 @@ namespace OpenMeido
         /// MCP服务器列表选择变化事件
         private void McpServersListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var selectedServer = McpServersListBox.SelectedItem as McpServerConfig;
-            if (selectedServer != null)
-            {
-                LoadMcpServerDetails(selectedServer);
-            }
-        }
-
-        /// 加载MCP服务器详细信息到编辑区域
-        private void LoadMcpServerDetails(McpServerConfig server)
-        {
-            currentEditingServer = server;
-            McpServerNameTextBox.Text = server.Name;
-            McpServerCommandTextBox.Text = server.Command;
-            McpServerArgumentsTextBox.Text = server.Arguments;
-            McpServerDescriptionTextBox.Text = server.Description;
-            McpServerDetailsGroup.Visibility = Visibility.Visible;
+            // 不再自动进入编辑模式，用户需要明确点击编辑按钮
+            // 这里可以添加一些选中状态的处理逻辑，如果需要的话
         }
 
         /// 添加MCP服务器按钮点击事件
         private void AddMcpServerButton_Click(object sender, RoutedEventArgs e)
         {
-            var newServer = new McpServerConfig
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                Name = "新服务器",
-                Command = "",
-                Arguments = "",
-                Description = "",
-                IsEnabled = true
-            };
-
-            LoadMcpServerDetails(newServer);
+                // 创建编辑窗口（新建模式）
+                var editWindow = new McpServerEditWindow(this, mcpServers?.ToList());
+                
+                // 显示模态对话框
+                var result = editWindow.ShowDialog();
+                
+                if (result == true && editWindow.IsSaved)
+                {
+                    // 添加新的服务器配置
+                    mcpServers.Add(editWindow.EditResult);
+                    
+                    MessageBox.Show("新MCP服务器配置已添加", "添加成功",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"添加MCP服务器时出错: {ex.Message}", "添加失败",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// 添加示例服务器配置按钮点击事件
@@ -557,63 +551,80 @@ namespace OpenMeido
         /// 添加示例服务器配置
         private void AddExampleServer(string name, string command, string arguments, string description)
         {
-            var exampleServer = new McpServerConfig
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = name,
-                Command = command,
-                Arguments = arguments,
-                Description = description,
-                IsEnabled = true
-            };
-
-            LoadMcpServerDetails(exampleServer);
-        }
-
-        /// 保存MCP服务器按钮点击事件
-        private void SaveMcpServerButton_Click(object sender, RoutedEventArgs e)
-        {
             try
             {
-                if (currentEditingServer == null) return;
-
-                // 更新服务器配置
-                currentEditingServer.Name = McpServerNameTextBox.Text?.Trim() ?? "";
-                currentEditingServer.Command = McpServerCommandTextBox.Text?.Trim() ?? "";
-                currentEditingServer.Arguments = McpServerArgumentsTextBox.Text?.Trim() ?? "";
-                currentEditingServer.Description = McpServerDescriptionTextBox.Text?.Trim() ?? "";
-
-                // 验证配置
-                if (!ValidateMcpServerConfig(currentEditingServer))
+                var exampleServer = new McpServerConfig
                 {
-                    return;
-                }
+                    Id = Guid.NewGuid().ToString(),
+                    Name = name,
+                    Command = command,
+                    Arguments = arguments,
+                    Description = description,
+                    IsEnabled = true
+                };
 
-                // 如果是新服务器，添加到集合
-                if (!mcpServers.Contains(currentEditingServer))
+                // 创建编辑窗口（新建模式，但预填充数据）
+                var editWindow = new McpServerEditWindow(this, mcpServers?.ToList());
+                
+                // 可以通过反射或者其他方式设置预填充数据，这里简化处理
+                // 直接传入预设服务器进行编辑
+                var prefilledEditWindow = new McpServerEditWindow(this, exampleServer, mcpServers?.ToList());
+                
+                // 显示模态对话框
+                var result = prefilledEditWindow.ShowDialog();
+                
+                if (result == true && prefilledEditWindow.IsSaved)
                 {
-                    mcpServers.Add(currentEditingServer);
+                    // 添加新的服务器配置
+                    mcpServers.Add(prefilledEditWindow.EditResult);
                 }
-
-                // 隐藏详细配置面板
-                McpServerDetailsGroup.Visibility = Visibility.Collapsed;
-                currentEditingServer = null;
-
-                MessageBox.Show("MCP服务器配置已保存", "保存成功",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"保存MCP服务器配置时出错: {ex.Message}", "保存失败",
+                MessageBox.Show($"添加示例服务器时出错: {ex.Message}", "添加失败",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        /// 取消MCP服务器编辑按钮点击事件
-        private void CancelMcpServerButton_Click(object sender, RoutedEventArgs e)
+
+
+        /// 编辑MCP服务器按钮点击事件
+        private void EditMcpServer_Click(object sender, RoutedEventArgs e)
         {
-            McpServerDetailsGroup.Visibility = Visibility.Collapsed;
-            currentEditingServer = null;
+            var button = sender as Button;
+            var server = button?.Tag as McpServerConfig;
+
+            if (server != null)
+            {
+                try
+                {
+                    // 创建编辑窗口（编辑模式）
+                    var editWindow = new McpServerEditWindow(this, server, mcpServers?.ToList());
+                    
+                    // 显示模态对话框
+                    var result = editWindow.ShowDialog();
+                    
+                    if (result == true && editWindow.IsSaved)
+                    {
+                        // 更新现有的服务器配置
+                        var index = mcpServers.IndexOf(server);
+                        if (index >= 0)
+                        {
+                            // 移除旧的配置，添加新的配置以触发UI更新
+                            mcpServers.RemoveAt(index);
+                            mcpServers.Insert(index, editWindow.EditResult);
+                            
+                            MessageBox.Show("服务器配置已更新", "编辑成功",
+                                MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"编辑MCP服务器时出错: {ex.Message}", "编辑失败",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
         /// 删除MCP服务器按钮点击事件
@@ -630,11 +641,6 @@ namespace OpenMeido
                 if (result == MessageBoxResult.Yes)
                 {
                     mcpServers.Remove(server);
-                    if (currentEditingServer == server)
-                    {
-                        McpServerDetailsGroup.Visibility = Visibility.Collapsed;
-                        currentEditingServer = null;
-                    }
                 }
             }
         }
@@ -703,78 +709,5 @@ namespace OpenMeido
         {
             base.OnClosed(e);
         }
-
-        /// 验证MCP服务器配置
-        /// <param name="server">服务器配置</param>
-        /// <returns>验证是否通过</returns>
-        private bool ValidateMcpServerConfig(McpServerConfig server)
-        {
-            if (string.IsNullOrWhiteSpace(server.Name))
-            {
-                MessageBox.Show("请输入服务器名称", "配置无效",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                McpServerNameTextBox.Focus();
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(server.Command))
-            {
-                MessageBox.Show("请输入命令", "配置无效",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                McpServerCommandTextBox.Focus();
-                return false;
-            }
-
-            var existingServer = mcpServers.FirstOrDefault(s => s.Id != server.Id && s.Name == server.Name);
-            if (existingServer != null)
-            {
-                MessageBox.Show($"服务器名称 '{server.Name}' 已存在，请使用不同的名称", "配置无效",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                McpServerNameTextBox.Focus();
-                return false;
-            }
-
-            // 验证命令格式
-            if (!IsValidCommand(server.Command))
-            {
-                var result = MessageBox.Show($"命令 '{server.Command}' 可能无效。\n\n常用命令包括：npx, python, node, 或可执行文件的完整路径。\n\n是否继续保存？",
-                    "命令验证", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (result == MessageBoxResult.No)
-                {
-                    McpServerCommandTextBox.Focus();
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// 验证命令是否有效
-        private bool IsValidCommand(string command)
-        {
-            if (string.IsNullOrWhiteSpace(command))
-                return false;
-
-            var validCommands = new[] { "npx", "python", "python3", "node", "java", "dotnet", "go" };
-            var commandLower = command.ToLower();
-
-            // 检查是否是常见命令
-            if (validCommands.Any(cmd => commandLower.StartsWith(cmd)))
-                return true;
-
-            // 检查是否是可执行文件路径
-            if (command.Contains("\\") || command.Contains("/"))
-                return true;
-
-            // 检查是否是Windows可执行文件
-            if (commandLower.EndsWith(".exe") || commandLower.EndsWith(".bat") || commandLower.EndsWith(".cmd"))
-                return true;
-
-            return false;
-        }
-
-
-
-
     }
 }
