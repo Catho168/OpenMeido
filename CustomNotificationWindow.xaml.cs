@@ -8,26 +8,20 @@ using System.Windows.Media;
 
 namespace OpenMeido
 {
-    /// <summary>
     /// 自定义通知窗口，提供与主界面设计系统一致的弹窗体验
-    /// </summary>
     public partial class CustomNotificationWindow : Window
     {
         private MessageBoxResult _result = MessageBoxResult.None;
         private readonly List<Button> _buttons = new List<Button>();
 
-        /// <summary>
         /// 构造函数
-        /// </summary>
         public CustomNotificationWindow()
         {
             InitializeComponent();
             this.MouseLeftButtonDown += (s, e) => this.DragMove();
         }
 
-        /// <summary>
         /// 显示通知对话框
-        /// </summary>
         /// <param name="message">消息内容</param>
         /// <param name="title">标题</param>
         /// <param name="button">按钮类型</param>
@@ -46,9 +40,7 @@ namespace OpenMeido
             return window.ShowInternal(message, title, button, icon);
         }
 
-        /// <summary>
         /// 内部显示方法
-        /// </summary>
         private MessageBoxResult ShowInternal(string message, string title, MessageBoxButton button, MessageBoxImage icon)
         {
             // 设置消息和标题
@@ -70,9 +62,7 @@ namespace OpenMeido
             return _result;
         }
 
-        /// <summary>
         /// 设置图标
-        /// </summary>
         private void SetIcon(MessageBoxImage icon)
         {
             string iconText;
@@ -97,9 +87,7 @@ namespace OpenMeido
             IconTextBlock.Text = iconText;
         }
 
-        /// <summary>
         /// 设置按钮
-        /// </summary>
         private void SetupButtons(MessageBoxButton button)
         {
             ButtonPanel.Children.Clear();
@@ -126,9 +114,7 @@ namespace OpenMeido
             }
         }
 
-        /// <summary>
         /// 创建按钮
-        /// </summary>
         private void CreateButton(string text, MessageBoxResult result, string styleName, bool isDefault)
         {
             var button = new Button
@@ -154,9 +140,7 @@ namespace OpenMeido
             _buttons.Add(button);
         }
 
-        /// <summary>
         /// 调整窗口大小以适应内容
-        /// </summary>
         private void AdjustWindowSize()
         {
             // 测量文本大小
@@ -176,16 +160,14 @@ namespace OpenMeido
             
             this.Width = Math.Max(minWidth, Math.Min(maxWidth, requiredWidth));
             
-            // 如果文本很长，增加高度以容纳多行
+            // 如果文本很长
             if (formattedText.Width > maxWidth - 80)
             {
                 this.Height = 220 + (int)(formattedText.Height * 2);
             }
         }
 
-        /// <summary>
         /// 处理键盘事件
-        /// </summary>
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);

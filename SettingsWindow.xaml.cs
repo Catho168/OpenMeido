@@ -719,25 +719,5 @@ namespace OpenMeido
         {
             base.OnClosed(e);
         }
-
-        /// 测试通知按钮点击事件处理器
-        private void TestNotificationButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                // 使用CustomNotificationWindow的静态Show方法显示通知
-                CustomNotificationWindow.Show(
-                    "这是一条测试通知，妹抖酱正在测试通知功能是否正常工作~", 
-                    "妹抖酱通知测试", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Information, 
-                    this);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"测试通知时出错: {ex.Message}", "测试失败",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
     }
 }
