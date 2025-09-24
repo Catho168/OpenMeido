@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -368,15 +369,26 @@ namespace OpenMeido
         {
             var uiSettings = GetSettingsFromUI();
             
-            return currentSettings.ApiBaseUrl != uiSettings.ApiBaseUrl ||
-                   currentSettings.ApiKey != uiSettings.ApiKey ||
-                   currentSettings.ModelName != uiSettings.ModelName ||
-                   currentSettings.MaxTokens != uiSettings.MaxTokens ||
-                   Math.Abs(currentSettings.Temperature - uiSettings.Temperature) > 0.01 ||
-                   currentSettings.SystemPrompt != uiSettings.SystemPrompt ||
-                   currentSettings.EnableMcp != uiSettings.EnableMcp ||
-                   currentSettings.SelectedCategory != uiSettings.SelectedCategory ||
-                   HasMcpServersChanged(uiSettings);
+            // 检查基本设置是否改变
+            if (currentSettings.ApiBaseUrl != uiSettings.ApiBaseUrl ||
+                currentSettings.ApiKey != uiSettings.ApiKey ||
+                currentSettings.ModelName != uiSettings.ModelName ||
+                currentSettings.MaxTokens != uiSettings.MaxTokens ||
+                currentSettings.EnableMcp != uiSettings.EnableMcp ||
+                currentSettings.SelectedCategory != uiSettings.SelectedCategory ||
+                currentSettings.SystemPrompt != uiSettings.SystemPrompt)
+            {
+                return true;
+            }
+            
+            // 使用更安全的方式比较浮点数
+            if (Math.Abs(currentSettings.Temperature - uiSettings.Temperature) > 0.001)
+            {
+                return true;
+            }
+            
+            // 检查MCP服务器配置是否改变
+            return HasMcpServersChanged(uiSettings);
         }
 
         /// 检查MCP服务器配置是否已更改
@@ -384,20 +396,18 @@ namespace OpenMeido
         /// <returns>如果MCP服务器配置已更改返回true</returns>
         private bool HasMcpServersChanged(AppSettings uiSettings)
         {
-            if (currentSettings.McpServers == null && uiSettings.McpServers == null)
-                return false;
+            // 处理null情况
+            var currentServers = currentSettings.McpServers ?? new List<McpServerConfig>();
+            var uiServers = uiSettings.McpServers ?? new List<McpServerConfig>();
 
-            if (currentSettings.McpServers == null || uiSettings.McpServers == null)
-                return true;
-
-            if (currentSettings.McpServers.Count != uiSettings.McpServers.Count)
+            if (currentServers.Count != uiServers.Count)
                 return true;
 
             // 比较每个服务器配置
-            for (int i = 0; i < currentSettings.McpServers.Count; i++)
+            for (int i = 0; i < currentServers.Count; i++)
             {
-                var current = currentSettings.McpServers[i];
-                var ui = uiSettings.McpServers[i];
+                var current = currentServers[i];
+                var ui = uiServers[i];
 
                 if (current.Id != ui.Id ||
                     current.Name != ui.Name ||

@@ -258,9 +258,9 @@ namespace OpenMeido
             // 检查是否有未保存的更改
             if (HasUnsavedChanges())
             {
-                var result = MessageBox.Show(
+                var result = CustomNotificationWindow.Show(
                     "您有未保存的更改，确定要取消吗？",
-                    "确认取消", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    "确认取消", MessageBoxButton.YesNo, MessageBoxImage.Question, this);
                 
                 if (result == MessageBoxResult.No)
                 {

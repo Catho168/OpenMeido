@@ -11,7 +11,7 @@
         Icon="{x:Null}">
     
     <Window.Resources>
-        <!-- 用户消息样式 - 扁平化设计 -->
+        <!-- 用户消息样式 -->
         <Style x:Key="UserMessageStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource MeidoThemeColor}"/>
             <Setter Property="CornerRadius" Value="15"/>
