@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Runtime.InteropServices;
 
@@ -11,16 +11,15 @@ namespace OpenMeido
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            // 1. 修复DPI缩放问题
+            // DPI缩放
             if (Environment.OSVersion.Version.Major >= 6)
             {
                 SetProcessDPIAware();
             }
 
-            // 2. 初始化应用
+            // 初始化应用
             base.OnStartup(e);
 
-            // 注释掉主窗口初始化，避免编译错误
             var mainWin = new MainWindow();
             mainWin.Show();
             mainWin.Hide();

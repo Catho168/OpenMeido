@@ -87,13 +87,7 @@
             </Setter>
         </Style>
 
-        <!-- 窗口阴影效果 -->
-        <DropShadowEffect x:Key="WindowShadowEffect"
-                          Color="Black"
-                          Direction="315"
-                          ShadowDepth="8"
-                          BlurRadius="15"
-                          Opacity="0.4"/>
+        
 
         <!-- 标题栏按钮样式 -->
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
@@ -146,10 +140,9 @@
         </Style>
     </Window.Resources>
 
-    <!-- 主容器，带圆角和阴影 -->
+    <!-- 主容器，带圆角 -->
     <Border Background="White"
             CornerRadius="12"
-            Effect="{StaticResource WindowShadowEffect}"
             BorderBrush="{StaticResource MeidoThemeColor}"
             BorderThickness="2">
 
@@ -291,7 +284,7 @@
                    BorderBrush="#E5E7EB"
                    BorderThickness="0,1,0,0"
                    Padding="20,16"
-                   CornerRadius="0,0,10,10">
+                   CornerRadius="0,0,12,12">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

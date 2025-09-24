@@ -455,22 +455,13 @@ namespace OpenMeido
                 UseLayoutRounding = true,  // 启用布局舍入以提高渲染清晰度
                 SnapsToDevicePixels = true // 启用像素对齐以提高渲染清晰度
             };
-            // 主容器，带圆角和阴影效果
+            // 主容器，带圆角
             var mainBorder = new Border
             {
                 Background = Brushes.White,
                 CornerRadius = new CornerRadius(12),
                 BorderBrush = new SolidColorBrush(GetThemeUIColor("success")),
                 BorderThickness = new Thickness(2),
-                Effect = new DropShadowEffect
-                {
-                    Color = Colors.Black,
-                    Direction = 315,
-                    ShadowDepth = 8,
-                    BlurRadius = 15,
-                    Opacity = 0.3
-                },
-                Margin = new Thickness(10, 10, 10, 10), // 为阴影留出空间
                 UseLayoutRounding = true,  // 启用布局舍入以提高渲染清晰度
                 SnapsToDevicePixels = true // 启用像素对齐以提高渲染清晰度
             };
@@ -799,15 +790,8 @@ namespace OpenMeido
                 }
             };
 
-            // 淡入动画
-            detailsWindow.Opacity = 0;
+            // 显示窗口
             detailsWindow.Show();
-            
-            var fadeInAnimation = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
-            {
-                EasingFunction = new PowerEase { Power = 2, EasingMode = EasingMode.EaseOut }
-            };
-            detailsWindow.BeginAnimation(Window.OpacityProperty, fadeInAnimation);
         }
 
         /// 工具调用数据类

@@ -11,13 +11,7 @@
         Icon="{x:Null}">
     
     <Window.Resources>
-        <!-- 窗口阴影效果 -->
-        <DropShadowEffect x:Key="WindowShadowEffect"
-                          Color="Black"
-                          Direction="315"
-                          ShadowDepth="8"
-                          BlurRadius="15"
-                          Opacity="0.4"/>
+        
 
         <!-- 主按钮样式 -->
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
@@ -34,7 +28,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="6"
+                                CornerRadius="4"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -69,7 +63,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
+                                CornerRadius="4"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -94,12 +88,11 @@
         </Style>
     </Window.Resources>
 
-    <!-- 主容器，带圆角和阴影 -->
+    <!-- 主容器，带圆角 -->
     <Border Background="White"
-            CornerRadius="12"
-            Effect="{StaticResource WindowShadowEffect}"
-            BorderBrush="{StaticResource MeidoThemeColor}"
-            BorderThickness="2">
+            CornerRadius="6"
+            BorderBrush="#D1D5DB"
+            BorderThickness="1">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -110,25 +103,28 @@
 
             <!-- 图标和标题区域 -->
             <Border Grid.Row="0"
-                    Background="{StaticResource MeidoThemeColor}"
-                    CornerRadius="10,10,0,0"
-                    Padding="20,15">
+                    Background="#F8F9FA"
+                    CornerRadius="6,6,0,0"
+                    Padding="20,15"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="0,0,0,1">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock x:Name="IconTextBlock"
                                Style="{StaticResource IconStyle}"
-                               Foreground="White"
+                               Foreground="{StaticResource MeidoThemeColor}"
                                TextAlignment="Center"/>
                     <TextBlock x:Name="TitleTextBlock"
                                FontSize="16"
                                FontWeight="Bold"
-                               Foreground="White"
+                               Foreground="#374151"
                                TextAlignment="Center"/>
                 </StackPanel>
             </Border>
 
             <!-- 消息内容区域 -->
             <Border Grid.Row="1"
-                    Padding="20,15">
+                    Padding="20,15"
+                    Background="White">
                 <TextBlock x:Name="MessageTextBlock"
                            FontSize="13"
                            Foreground="#374151"
@@ -140,7 +136,10 @@
             <!-- 按钮区域 -->
             <Border Grid.Row="2"
                     Padding="20,10"
-                    Background="#F9FAFB">
+                    Background="#F9FAFB"
+                    CornerRadius="0,0,6,6"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="0,1,0,0">
                 <StackPanel x:Name="ButtonPanel"
                             Orientation="Horizontal"
                             HorizontalAlignment="Center">
