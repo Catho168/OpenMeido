@@ -6,8 +6,10 @@ using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol.Transport;
+using OpenMeido.Models;
+using McpServerConfig = OpenMeido.Models.McpServerConfig;
 
-namespace OpenMeido
+namespace OpenMeido.Services
 {
     /// MCP服务管理类，负责管理MCP客户端连接和工具调用
     public class McpService : IDisposable
@@ -214,7 +216,7 @@ namespace OpenMeido
 
         /// 获取MCP服务器状态信息
         /// <returns>服务器状态信息列表</returns>
-        public List<(string Id, string Name, bool IsConnected, int ToolCount)> GetServerStatus()
+        public async Task<List<(string Id, string Name, bool IsConnected, int ToolCount)>> GetServerStatusAsync()
         {
             var statusList = new List<(string Id, string Name, bool IsConnected, int ToolCount)>();
 
@@ -229,12 +231,12 @@ namespace OpenMeido
                     {
                         try
                         {
-                            var tools = mcpClients[serverConfig.Id].ListToolsAsync().Result;
+                            var tools = await mcpClients[serverConfig.Id].ListToolsAsync();
                             toolCount = tools?.Count ?? 0;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // 如果获取工具列表失败，认为连接有问题
+                            System.Diagnostics.Debug.WriteLine($"获取服务器 '{serverConfig.Id}' 工具列表失败: {ex.Message}");
                             isConnected = false;
                         }
                     }
@@ -316,6 +318,7 @@ namespace OpenMeido
                 Task.Run(async () => await DisposeClientsAsync()).Wait();
                 disposed = true;
             }
+            GC.SuppressFinalize(this);
         }
     }
 }

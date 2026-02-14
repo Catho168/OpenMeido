@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace OpenMeido
+namespace OpenMeido.Services
 {
     /// MCP活动记录项
     public class McpActivityRecord

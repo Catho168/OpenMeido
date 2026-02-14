@@ -7,6 +7,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using OpenMeido.Models;
+using OpenMeido.Services;
 
 namespace OpenMeido
 {
@@ -176,6 +178,12 @@ namespace OpenMeido
         /// 测试连接按钮点击事件处理器
         private async void TestConnectionButton_Click(object sender, RoutedEventArgs e)
         {
+            await TestConnectionButton_Click_InternalAsync();
+        }
+
+        /// 测试连接逻辑
+        private async Task TestConnectionButton_Click_InternalAsync()
+        {
             try
             {
                 // 禁用测试按钮，防止重复点击
@@ -225,6 +233,12 @@ namespace OpenMeido
 
         /// 保存设置按钮点击事件处理器
         private async void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SaveButton_Click_InternalAsync();
+        }
+
+        /// 保存设置逻辑
+        private async Task SaveButton_Click_InternalAsync()
         {
             try
             {
@@ -325,6 +339,12 @@ namespace OpenMeido
 
         /// 窗口关闭事件处理器
         private async void SettingsWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            await SettingsWindow_Closing_InternalAsync(e);
+        }
+
+        /// 窗口关闭逻辑
+        private async Task SettingsWindow_Closing_InternalAsync(System.ComponentModel.CancelEventArgs e)
         {
             // 如果窗口已经在关闭过程中，不进行任何操作
             if (isClosing)
@@ -657,6 +677,12 @@ namespace OpenMeido
 
         /// 测试MCP服务器连接按钮点击事件
         private async void TestMcpServer_Click(object sender, RoutedEventArgs e)
+        {
+            await TestMcpServer_Click_InternalAsync(sender, e);
+        }
+
+        /// 测试MCP服务器连接逻辑
+        private async Task TestMcpServer_Click_InternalAsync(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
             var server = button?.Tag as McpServerConfig;

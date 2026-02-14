@@ -1,4 +1,4 @@
-﻿﻿// 系统运行时互操作服务，用于调用Windows API函数
+﻿﻿﻿﻿﻿// 系统运行时互操作服务，用于调用Windows API函数
 using System.Runtime.InteropServices;
 // WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
 using System.Windows.Interop;
@@ -24,6 +24,9 @@ using System.Linq;
 // 引入任务以便异步等待关闭动画完成
 using System.Threading.Tasks;
 using System.Windows.Controls.Primitives;
+using OpenMeido.Models;
+using OpenMeido.Services;
+using OpenMeido.Helpers;
 
 // 定义OpenMeido命名空间，用于组织和封装项目中的所有类
 namespace OpenMeido
@@ -695,6 +698,12 @@ namespace OpenMeido
         // 关闭动画
         private async void StartCloseAnimation()
         {
+            await StartCloseAnimationAsync();
+        }
+
+        // 关闭动画逻辑
+        private async Task StartCloseAnimationAsync()
+        {
             if (_isClosingAnimationRunning) return;
             _isClosingAnimationRunning = true;
 
@@ -1195,7 +1204,7 @@ namespace OpenMeido
         }
 
         /// 更新MCP状态显示
-        private void UpdateMcpStatusDisplay()
+        private async void UpdateMcpStatusDisplay()
         {
             try
             {
@@ -1205,7 +1214,7 @@ namespace OpenMeido
                     return;
                 }
 
-                var serverStatuses = _mcpService.GetServerStatus();
+                var serverStatuses = await _mcpService.GetServerStatusAsync();
                 var connectedCount = serverStatuses.Count(s => s.IsConnected);
                 var totalCount = serverStatuses.Count;
                 var totalTools = serverStatuses.Where(s => s.IsConnected).Sum(s => s.ToolCount);

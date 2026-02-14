@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using OpenMeido.Models;
 
 namespace OpenMeido
 {

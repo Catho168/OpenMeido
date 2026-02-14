@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace OpenMeido
+namespace OpenMeido.Models
 {
     /// 设置页面分类枚举
     public enum SettingsCategory

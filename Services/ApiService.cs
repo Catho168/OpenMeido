@@ -12,8 +12,10 @@ using System.ClientModel;
 using ModelContextProtocol.Client;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol.Transport;
+using OpenMeido.Models;
+using ChatMessage = OpenMeido.Models.ChatMessage;
 
-namespace OpenMeido
+namespace OpenMeido.Services
 {
     /// AI API服务类，负责与OpenAI格式的API进行通信，支持MCP工具集成
     public class ApiService : IDisposable
@@ -384,7 +386,7 @@ namespace OpenMeido
                     return "";
                 }
 
-                var serverStatuses = mcpService.GetServerStatus();
+                var serverStatuses = await mcpService.GetServerStatusAsync();
                 System.Diagnostics.Debug.WriteLine($"[MCP] 找到 {serverStatuses.Count} 个服务器状态");
 
                 foreach (var serverStatus in serverStatuses)

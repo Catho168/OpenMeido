@@ -10,6 +10,9 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Data;
 using ModelContextProtocol.Client;
+using OpenMeido.Models;
+using OpenMeido.Services;
+using OpenMeido.Helpers;
 
 namespace OpenMeido
 {
@@ -69,6 +72,12 @@ namespace OpenMeido
         /// 初始化API服务
         private async void InitializeApiService()
         {
+            await InitializeApiServiceAsync();
+        }
+
+        /// 初始化API服务逻辑
+        private async Task InitializeApiServiceAsync()
+        {
             try
             {
                 // 加载应用程序设置
@@ -114,32 +123,13 @@ namespace OpenMeido
         /// 获取主题色相关的状态颜色
         private Color GetThemeStatusColor(string statusType)
         {
-            return statusType switch
-            {
-                "ready" => Color.FromRgb(0xE8, 0x74, 0x75), // 主题色 - 就绪状态
-                "processing" => Color.FromRgb(0xF0, 0xA0, 0xA1), // 主题色浅色 - 处理中
-                "error" => Color.FromRgb(0xD6, 0x58, 0x59), // 主题色深色 - 错误状态
-                "warning" => Color.FromRgb(0xF0, 0xA0, 0xA1), // 主题色浅色 - 警告状态
-                _ => Color.FromRgb(0xE8, 0x74, 0x75) // 默认主题色
-            };
+            return ThemeColors.GetStatusColor(statusType);
         }
 
         /// 获取主题色相关的UI颜色
         private Color GetThemeUIColor(string colorType)
         {
-            return colorType switch
-            {
-                "success" => Color.FromRgb(0xE8, 0x74, 0x75), // 成功状态使用主题色
-                "error" => Color.FromRgb(0xD6, 0x58, 0x59), // 错误状态使用主题色深色
-                "warning" => Color.FromRgb(0xF0, 0xA0, 0xA1), // 警告状态使用主题色浅色
-                "processing" => Color.FromRgb(0xF0, 0xA0, 0xA1), // 处理中状态
-                "muted" => Color.FromRgb(0xE8, 0xC4, 0xC5), // 弱化文本(主题色+灰色混合)
-                "background_success" => Color.FromRgb(0xF8, 0xF0, 0xF0), // 成功背景色
-                "background_error" => Color.FromRgb(0xF5, 0xE8, 0xE8), // 错误背景色
-                "border_success" => Color.FromRgb(0xF0, 0xA0, 0xA1), // 成功边框色
-                "border_error" => Color.FromRgb(0xD6, 0x58, 0x59), // 错误边框色
-                _ => Color.FromRgb(0xE8, 0x74, 0x75) // 默认主题色
-            };
+            return ThemeColors.GetUiColor(colorType);
         }
 
         /// 发送按钮点击事件处理器
@@ -1352,7 +1342,7 @@ namespace OpenMeido
                 if (mcpServiceField?.GetValue(apiService) is McpService mcpService)
                 {
                     // 显示服务器状态
-                    var serverStatuses = mcpService.GetServerStatus();
+                    var serverStatuses = await mcpService.GetServerStatusAsync();
                     await DisplayMcpServersStatus(serverStatuses);
 
                     // 显示可用工具

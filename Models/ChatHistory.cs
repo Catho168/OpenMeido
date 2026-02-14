@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
 
-namespace OpenMeido
+namespace OpenMeido.Models
 {
     /// 单条聊天消息
     public class ChatMessage

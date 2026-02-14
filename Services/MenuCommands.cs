@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace OpenMeido
+namespace OpenMeido.Services
 {
     /// 菜单命令定义类，包含所有可用的菜单操作命令
     /// 使用静态命令对象实现命令模式，便于统一管理和扩展
