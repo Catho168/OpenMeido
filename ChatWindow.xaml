@@ -193,7 +193,7 @@
                                    Foreground="White"
                                    VerticalAlignment="Center"/>
                         <TextBlock x:Name="StatusTextBlock"
-                                   Text="待命"
+                                   Text="{Binding StatusText}"
                                    FontSize="11"
                                    Foreground="White"
                                    VerticalAlignment="Center"
@@ -239,7 +239,7 @@
                                 ToolTip="展开/折叠历史记录">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="HistoryToggleIcon" Text="📁" FontSize="14" Margin="0,0,4,0"/>
-                                <TextBlock x:Name="CurrentSessionTitle" Text="与妹抖酱的对话" FontSize="12" VerticalAlignment="Center" Foreground="#666"/>
+                                <TextBlock x:Name="CurrentSessionTitle" Text="{Binding CurrentSessionTitle}" FontSize="12" VerticalAlignment="Center" Foreground="#666"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -420,6 +420,8 @@
                     <TextBox x:Name="InputTextBox"
                              Style="{StaticResource InputTextBoxStyle}"
                              MaxHeight="100"
+                             Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding IsInputEnabled}"
                              KeyDown="InputTextBox_KeyDown"
                              TextChanged="InputTextBox_TextChanged"/>
                     <TextBlock x:Name="PlaceholderTextBlock"
@@ -446,6 +448,7 @@
                     <Button x:Name="SendButton" Grid.Column="1"
                             Content="发送" 
                             Style="{StaticResource SendButtonStyle}"
+                            IsEnabled="{Binding CanSend}"
                             Click="SendButton_Click"
                             IsDefault="True"/>
                 </Grid>

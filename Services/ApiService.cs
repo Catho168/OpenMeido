@@ -450,6 +450,51 @@ namespace OpenMeido.Services
             return mcpActivityLogger;
         }
 
+        /// 获取MCP服务器状态信息
+        /// <returns>服务器状态信息列表</returns>
+        public async Task<List<(string Id, string Name, bool IsConnected, int ToolCount)>> GetMcpServerStatusesAsync()
+        {
+            if (mcpService == null)
+            {
+                return new List<(string Id, string Name, bool IsConnected, int ToolCount)>();
+            }
+
+            return await mcpService.GetServerStatusAsync();
+        }
+
+        /// 获取所有可用的MCP工具
+        /// <returns>工具列表</returns>
+        public async Task<IList<McpClientTool>> GetAvailableMcpToolsAsync()
+        {
+            if (mcpService == null)
+            {
+                return new List<McpClientTool>();
+            }
+
+            return await mcpService.GetAvailableToolsAsync();
+        }
+
+        /// 获取最近的MCP活动记录
+        /// <param name="count">记录数量</param>
+        /// <returns>活动记录列表</returns>
+        public List<McpActivityRecord> GetRecentMcpActivities(int count = 20)
+        {
+            return mcpActivityLogger?.GetRecentActivities(count) ?? new List<McpActivityRecord>();
+        }
+
+        /// 获取MCP活动统计信息
+        /// <returns>统计信息</returns>
+        public McpActivityStatistics GetMcpActivityStatistics()
+        {
+            return mcpActivityLogger?.GetStatistics() ?? new McpActivityStatistics();
+        }
+
+        /// 清空MCP活动记录
+        public void ClearMcpActivities()
+        {
+            mcpActivityLogger?.ClearActivities();
+        }
+
         /// 使用传统HTTP方式发送聊天消息到AI API并获取回复
         /// <param name="messagesHistory">完整历史消息列表</param>
         /// <returns>AI的回复消息</returns>

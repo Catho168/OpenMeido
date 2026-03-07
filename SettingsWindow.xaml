@@ -511,6 +511,7 @@
                             <Label Content="API基础URL:" Style="{StaticResource LabelStyle}"/>
                             <TextBox x:Name="ApiBaseUrlTextBox"
                                      Style="{StaticResource TextBoxStyle}"
+                                     Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="输入妹抖酱连接的API地址哦~ 例如: https://api.openai.com/v1"/>
                             <TextBlock Text="妹抖酱支持OpenAI及其兼容格式的API服务"
                                        FontSize="10" Foreground="#6B7280" Margin="0,2,0,12"/>
@@ -519,6 +520,7 @@
                             <Label Content="API密钥:" Style="{StaticResource LabelStyle}"/>
                             <PasswordBox x:Name="ApiKeyPasswordBox"
                                          Style="{StaticResource PasswordBoxStyle}"
+                                         PasswordChanged="ApiKeyPasswordBox_PasswordChanged"
                                          ToolTip="输入你的API密钥让妹抖酱工作~"/>
                             <TextBlock Text="请好好保管API密钥，不要告诉别人哦~"
                                        FontSize="10" Foreground="#DC2626" Margin="0,2,0,12"/>
@@ -527,6 +529,7 @@
                             <Label Content="AI模型:" Style="{StaticResource LabelStyle}"/>
                             <TextBox x:Name="ModelNameComboBox"
                                      Style="{StaticResource TextBoxStyle}"
+                                     Text="{Binding ModelName, UpdateSourceTrigger=PropertyChanged}"
                                      ToolTip="输入妹抖酱使用的模型~"/>
                             <TextBlock Text="不同模型的聪明程度和费用不同哦，按需选择吧~"
                                        FontSize="10" Foreground="#6B7280" Margin="0,2,0,12"/>
@@ -584,7 +587,8 @@
                             <Label Content="回复长度:" Style="{StaticResource LabelStyle}"/>
                             <Slider x:Name="MaxTokensSlider"
                                     Minimum="100" Maximum="4000"
-                                    Value="1000" TickFrequency="100"
+                                    Value="{Binding MaxTokens, Mode=TwoWay}"
+                                    TickFrequency="100"
                                     IsSnapToTickEnabled="True"
                                     Margin="0,5"/>
                             <TextBlock x:Name="MaxTokensLabel"
@@ -600,7 +604,8 @@
                             <Label Content="创造力:" Style="{StaticResource LabelStyle}"/>
                             <Slider x:Name="TemperatureSlider"
                                     Minimum="0.0" Maximum="2.0"
-                                    Value="0.7" TickFrequency="0.1"
+                                    Value="{Binding Temperature, Mode=TwoWay}"
+                                    TickFrequency="0.1"
                                     IsSnapToTickEnabled="True"
                                     Margin="0,5"/>
                             <TextBlock x:Name="TemperatureLabel"
@@ -643,6 +648,7 @@
                             <Label Content="系统提示词:" Style="{StaticResource LabelStyle}"/>
                             <TextBox x:Name="SystemPromptTextBox"
                                      Style="{StaticResource TextBoxStyle}"
+                                     Text="{Binding SystemPrompt, UpdateSourceTrigger=PropertyChanged}"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto"
@@ -686,6 +692,7 @@
                         <StackPanel Margin="16">
                             <CheckBox x:Name="EnableMcpCheckBox"
                                       Content="启用MCP (Model Context Protocol) 工具支持"
+                                      IsChecked="{Binding EnableMcp, Mode=TwoWay}"
                                       FontSize="12"
                                       FontWeight="Medium"
                                       Foreground="#1F2937"
@@ -730,6 +737,7 @@
                                 <!-- MCP服务器列表 -->
                                 <Border BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="6" Margin="0,0,0,12" Background="White">
                         <ListBox x:Name="McpServersListBox"
+                                 ItemsSource="{Binding McpServers}"
                                  Height="140"
                                  SelectionChanged="McpServersListBox_SelectionChanged"
                                  Background="Transparent"

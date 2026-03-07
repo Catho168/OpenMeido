@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using OpenMeido.Models;
 using OpenMeido.Services;
+using OpenMeido.ViewModels;
 
 namespace OpenMeido
 {
@@ -16,6 +17,8 @@ namespace OpenMeido
     /// 用于配置妹抖酱的API参数和其他设置
     public partial class SettingsWindow : Window
     {
+        private readonly SettingsViewModel _viewModel;
+
         // 存储当前的应用程序设置
         private AppSettings currentSettings;
 
@@ -35,9 +38,16 @@ namespace OpenMeido
         private SettingsCategory currentCategory = SettingsCategory.General;
 
         /// 构造函数，初始化设置窗口
-        public SettingsWindow()
+        public SettingsWindow() : this(ResolveViewModel())
         {
+        }
+
+        public SettingsWindow(SettingsViewModel viewModel)
+        {
+            _viewModel = viewModel ?? ResolveViewModel();
+
             InitializeComponent();
+            DataContext = _viewModel;
 
             // 加载当前设置
             LoadCurrentSettings();
@@ -53,40 +63,32 @@ namespace OpenMeido
             InitializeCategoryNavigation();
         }
 
+        private static SettingsViewModel ResolveViewModel()
+        {
+            var appServices = (Application.Current as App)?.Services;
+            var viewModel = appServices?.GetService(typeof(SettingsViewModel)) as SettingsViewModel;
+            return viewModel ?? new SettingsViewModel(new SettingsService());
+        }
+
         /// 加载当前应用程序设置到界面控件
         private void LoadCurrentSettings()
         {
-            try
+            var loadResult = _viewModel.Initialize();
+            if (loadResult.Status == SettingsOperationStatus.Failure)
             {
-                // 从配置文件加载设置
-                currentSettings = AppSettings.Load();
-                
-                // 将设置值填充到界面控件
-                ApiBaseUrlTextBox.Text = currentSettings.ApiBaseUrl;
-                ApiKeyPasswordBox.Password = currentSettings.ApiKey;
-                ModelNameComboBox.Text = currentSettings.ModelName;
-                MaxTokensSlider.Value = currentSettings.MaxTokens;
-                TemperatureSlider.Value = currentSettings.Temperature;
-                SystemPromptTextBox.Text = currentSettings.SystemPrompt;
-
-                // 加载MCP设置
-                LoadMcpSettings();
-
-                // 更新标签显示
-                UpdateSliderLabels();
-
-                // 设置当前分类
-                currentCategory = currentSettings.SelectedCategory;
-            }
-            catch (Exception ex)
-            {
-                // 如果加载设置失败，显示错误消息
-                MessageBox.Show($"加载妹抖酱的设置时出错了: {ex.Message}", "出错了",
+                MessageBox.Show($"加载妹抖酱的设置时出错了: {loadResult.Message}", "出错了",
                     MessageBoxButton.OK, MessageBoxImage.Error);
-
-                // 使用默认设置
-                currentSettings = new AppSettings();
             }
+
+            currentSettings = _viewModel.CreateSettingsSnapshot();
+            currentCategory = _viewModel.SelectedCategory;
+            ApiKeyPasswordBox.Password = _viewModel.ApiKey;
+
+            // 加载MCP设置
+            LoadMcpSettings();
+
+            // 更新标签显示
+            UpdateSliderLabels();
         }
 
         /// 初始化分类导航
@@ -113,6 +115,7 @@ namespace OpenMeido
         private void SwitchToCategory(SettingsCategory category)
         {
             currentCategory = category;
+            _viewModel.SelectedCategory = category;
 
             // 更新按钮样式
             UpdateCategoryButtonStyles();
@@ -190,32 +193,22 @@ namespace OpenMeido
                 TestConnectionButton.IsEnabled = false;
                 TestConnectionButton.Content = "测试中~";
                 
-                // 从界面获取当前设置
-                var testSettings = GetSettingsFromUI();
-                
-                // 验证设置是否有效
-                if (!testSettings.IsValid())
+                var result = await _viewModel.TestConnectionAsync();
+
+                if (result.Status == SettingsOperationStatus.Success)
                 {
-                    MessageBox.Show("请把API配置信息填写完整哦~", "配置不完整",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    MessageBox.Show(result.Message, "连接成功",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                
-                // 创建API服务实例并测试连接
-                using (var apiService = new ApiService(testSettings))
+                else if (result.Status == SettingsOperationStatus.ValidationError)
                 {
-                    bool connectionSuccess = await apiService.TestConnectionAsync();
-                    
-                    if (connectionSuccess)
-                    {
-                        MessageBox.Show("妹抖酱连接成功！可以开始聊天了♪", "连接成功",
-                            MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show("妹抖酱连接失败了，请检查配置信息~", "连接失败",
-                            MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
+                    MessageBox.Show(result.Message, "配置不完整",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    MessageBox.Show(result.Message, "连接失败",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             catch (Exception ex)
@@ -242,28 +235,30 @@ namespace OpenMeido
         {
             try
             {
-                // 从界面获取设置
-                var newSettings = GetSettingsFromUI();
-                
-                // 验证设置是否有效
-                if (!newSettings.IsValid())
+                var result = await _viewModel.SaveAsync();
+
+                if (result.Status == SettingsOperationStatus.ValidationError)
                 {
-                    MessageBox.Show("请填写完整且正确的配置信息", "配置无效",
+                    MessageBox.Show(result.Message, "配置无效",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                
-                // 异步保存设置到文件
-                await newSettings.SaveAsync();
-                
-                // 更新当前设置
-                currentSettings = newSettings;
+
+                if (!result.IsSuccess)
+                {
+                    MessageBox.Show(result.Message, "保存失败",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                currentSettings = GetSettingsFromUI();
                 settingsSaved = true;
+                mcpService = new McpService(currentSettings);
                 
                 // 只有在窗口未关闭时才显示消息框
                 if (!isClosing)
                 {
-                    MessageBox.Show("设置已保存成功！", "保存成功",
+                    MessageBox.Show(result.Message, "保存成功",
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 
@@ -291,48 +286,29 @@ namespace OpenMeido
         /// <returns>包含界面设置值的AppSettings对象</returns>
         private AppSettings GetSettingsFromUI()
         {
-            var settings = new AppSettings
-            {
-                ApiBaseUrl = ApiBaseUrlTextBox.Text?.Trim() ?? "",
-                ApiKey = ApiKeyPasswordBox.Password?.Trim() ?? "",
-                ModelName = ModelNameComboBox.Text?.Trim() ?? "",
-                MaxTokens = (int)MaxTokensSlider.Value,
-                Temperature = TemperatureSlider.Value,
-                SystemPrompt = SystemPromptTextBox.Text?.Trim() ?? "",
-                EnableMcp = EnableMcpCheckBox.IsChecked == true,
-                McpServers = mcpServers?.ToList() ?? new System.Collections.Generic.List<McpServerConfig>(),
-                SelectedCategory = currentCategory
-            };
-
+            var settings = _viewModel.CreateSettingsSnapshot();
+            settings.SelectedCategory = currentCategory;
             return settings;
         }
 
         /// 异步保存设置
         private async Task SaveSettingsAsync()
         {
-            try
+            var result = await _viewModel.SaveAsync();
+            if (result.Status == SettingsOperationStatus.Success)
             {
-                // 从界面获取设置
-                var newSettings = GetSettingsFromUI();
-                
-                // 验证设置是否有效
-                if (!newSettings.IsValid())
-                {
-                    MessageBox.Show("请填写完整且正确的配置信息", "配置无效",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                
-                // 异步保存设置到文件
-                await newSettings.SaveAsync();
-                
-                // 更新当前设置
-                currentSettings = newSettings;
+                currentSettings = GetSettingsFromUI();
                 settingsSaved = true;
+                mcpService = new McpService(currentSettings);
             }
-            catch (Exception ex)
+            else if (result.Status == SettingsOperationStatus.ValidationError)
             {
-                MessageBox.Show($"保存设置时出错: {ex.Message}", "保存失败",
+                MessageBox.Show(result.Message, "配置无效",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                MessageBox.Show(result.Message, "保存失败",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -448,24 +424,10 @@ namespace OpenMeido
         {
             try
             {
-                // 设置MCP启用状态
-                EnableMcpCheckBox.IsChecked = currentSettings.EnableMcp;
-
-                // 初始化MCP服务器集合
-                mcpServers = new ObservableCollection<McpServerConfig>();
-                if (currentSettings.McpServers != null)
-                {
-                    foreach (var server in currentSettings.McpServers)
-                    {
-                        mcpServers.Add(server);
-                    }
-                }
-
-                // 绑定到列表框
-                McpServersListBox.ItemsSource = mcpServers;
+                mcpServers = _viewModel.McpServers;
 
                 // 初始化MCP服务
-                mcpService = new McpService(currentSettings);
+                mcpService = new McpService(GetSettingsFromUI());
 
                 // 更新MCP面板可见性
                 UpdateMcpPanelVisibility();
@@ -480,7 +442,7 @@ namespace OpenMeido
         /// 更新MCP配置面板的可见性
         private void UpdateMcpPanelVisibility()
         {
-            McpConfigPanel.Visibility = EnableMcpCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            McpConfigPanel.Visibility = _viewModel.EnableMcp ? Visibility.Visible : Visibility.Collapsed;
         }
 
 
@@ -694,6 +656,7 @@ namespace OpenMeido
 
                 try
                 {
+                    mcpService = new McpService(GetSettingsFromUI());
                     var (success, message) = await mcpService.TestConnectionAsync(server);
 
                     MessageBox.Show(message, success ? "连接成功" : "连接失败",
@@ -717,6 +680,14 @@ namespace OpenMeido
         {
             // 这里可以添加启用状态变化的处理逻辑
             // 当前实现会自动通过数据绑定更新
+        }
+
+        private void ApiKeyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.ApiKey = ApiKeyPasswordBox.Password;
+            }
         }
 
         /// 标题栏鼠标按下事件处理器 - 实现窗口拖拽

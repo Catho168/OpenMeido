@@ -27,6 +27,7 @@ using System.Windows.Controls.Primitives;
 using OpenMeido.Models;
 using OpenMeido.Services;
 using OpenMeido.Helpers;
+using OpenMeido.ViewModels;
 
 // 定义OpenMeido命名空间，用于组织和封装项目中的所有类
 namespace OpenMeido
@@ -35,6 +36,8 @@ namespace OpenMeido
     // 部分类允许将类的定义分散在多个文件中（通常.xaml和.xaml.cs文件）
     public partial class MainWindow : Window
     {
+        private readonly MainViewModel _viewModel;
+
         // 定义全局热键的唯一标识符，用于在系统中注册和识别我们的热键
         // const表示编译时常量，值在编译后不可更改
         const int HOTKEY_ID = 9000;
@@ -116,10 +119,17 @@ namespace OpenMeido
 
         // 主窗口构造函数，在创建MainWindow实例时自动调用
         // public表示外部代码可以创建此类的实例
-        public MainWindow()
+        public MainWindow() : this(ResolveViewModel())
         {
+        }
+
+        public MainWindow(MainViewModel viewModel)
+        {
+            _viewModel = viewModel ?? new MainViewModel();
+
             // InitializeComponent() 由XAML编译器自动调用，无需手动处理
             InitializeComponent();
+            DataContext = _viewModel;
 
             // 设置画布的平移变换，用于实现窗口随鼠标轻微漂移
             if (MainCanvas != null)
@@ -143,34 +153,7 @@ namespace OpenMeido
             this.MouseLeave += WindowHider;
 
             // 使用集合初始化语法创建并初始化菜单项列表
-            menuItems = new List<RadialMenuItem>
-            {
-                // 创建记事本菜单项，使用对象初始化语法设置属性
-                new RadialMenuItem {
-                    Icon = "📝",
-                    Command = MenuCommands.OpenNotepad,  // 引用预定义的命令对象
-                    ToolTip = "打开记事本"
-                },
-                new RadialMenuItem {
-                    Icon = "🔒",
-                    Command = MenuCommands.LockWorkstation,
-                    ToolTip = "锁定电脑"
-                },
-
-                new RadialMenuItem
-                {
-                    Icon = "💬",
-                    Command = MenuCommands.OpenAiChat,
-                    ToolTip = "窗口对话"
-                },
-
-                new RadialMenuItem
-                {
-                    Icon = "⚙️",
-                    Command = MenuCommands.OpenSettings,
-                    ToolTip = "设置妹抖酱"
-                }
-            };
+            menuItems = _viewModel.MenuItems.ToList();
 
             //创建独立的径向菜单控件
             _radialMenu = new RadialMenuControl
@@ -206,6 +189,16 @@ namespace OpenMeido
 
             // 初始化MCP状态监控
             InitializeMcpStatusMonitoring();
+        }
+
+        private static MainViewModel ResolveViewModel()
+        {
+            if (Application.Current is App app)
+            {
+                return app.Services?.GetService(typeof(MainViewModel)) as MainViewModel ?? new MainViewModel();
+            }
+
+            return new MainViewModel();
         }
 
         // 窗口隐藏事件处理器，当鼠标离开窗口时自动隐藏窗口
@@ -511,7 +504,8 @@ namespace OpenMeido
                 // 在打开聊天窗口前，先隐藏主窗口内容
                 HideMainWindowContent();
                 
-                var chatWindow = new ChatWindow();
+                var appServices = (Application.Current as App)?.Services;
+                var chatWindow = appServices?.GetService(typeof(ChatWindow)) as ChatWindow ?? new ChatWindow();
                 chatWindow.Show();
 
                 // 追加历史
@@ -539,7 +533,9 @@ namespace OpenMeido
                 HideMainWindowContent();
                 
                 // 创建窗口
-                var settingsWindow = new SettingsWindow();
+                var appServices = (Application.Current as App)?.Services;
+                var settingsWindow = appServices?.GetService(typeof(SettingsWindow)) as SettingsWindow ?? new SettingsWindow();
+                settingsWindow.Owner = this;
 
                 // 以模态对话框形式显示
                 // 确保用户完成设置操作后才能继续
@@ -552,6 +548,7 @@ namespace OpenMeido
             {
                 MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
                     MessageBoxButton.OK, MessageBoxImage.Error);
+                RestoreMainWindowContent();
             }
         }
 
@@ -915,6 +912,7 @@ namespace OpenMeido
             _miniChatInput.Focus();
             _miniChatInput.Clear();
             _isMiniChatOpen = true;
+            _viewModel.IsMiniChatOpen = true;
 
             SetMeidoImage(MeidoChattingImagePath);
             PositionMeidoInCenter();
@@ -959,6 +957,7 @@ namespace OpenMeido
             }
 
             _isMiniChatOpen = false;
+            _viewModel.IsMiniChatOpen = false;
             _miniChatRoundCount = 0;
 
             // 清空迷你聊天历史与界面
@@ -1210,6 +1209,7 @@ namespace OpenMeido
             {
                 if (_mcpService == null)
                 {
+                    _viewModel.McpStatusText = "MCP: 0/0";
                     McpStatusIndicator.Visibility = Visibility.Collapsed;
                     return;
                 }
@@ -1220,7 +1220,7 @@ namespace OpenMeido
                 var totalTools = serverStatuses.Where(s => s.IsConnected).Sum(s => s.ToolCount);
 
                 // 更新状态文本
-                McpStatusText.Text = $"MCP: {connectedCount}/{totalCount} ({totalTools}工具)";
+                _viewModel.McpStatusText = $"MCP: {connectedCount}/{totalCount} ({totalTools}工具)";
 
                 // 更新状态指示器颜色
                 if (connectedCount == 0)
@@ -1245,6 +1245,7 @@ namespace OpenMeido
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"更新MCP状态显示失败: {ex.Message}");
+                _viewModel.McpStatusText = "MCP: 0/0";
                 McpStatusIndicator.Visibility = Visibility.Collapsed;
             }
         }

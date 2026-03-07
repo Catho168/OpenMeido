@@ -371,3 +371,26 @@ FodyWeavers.xsd
 .qoder/
 .trae/
 临时文档.md
+
+# Keep test project source files trackable
+!OpenMeido.Tests/**/*.cs
+!OpenMeido.Tests/**/*.csproj
+!OpenMeido.Tests/**/*.props
+!OpenMeido.Tests/**/*.targets
+
+# Test outputs, coverage artifacts, and temporary caches
+**/TestResults/
+**/*.trx
+**/coverage*.json
+**/coverage*.xml
+**/coverage*.info
+**/.test-cache/
+**/.tmp/
+
+# Prevent accidentally committing runtime config mirrored from APPDATA
+APPDATA/OpenMeido/
+%APPDATA%/OpenMeido/
+AppData/Roaming/OpenMeido/
+AppData/Local/OpenMeido/
+**/AppData/Roaming/OpenMeido/
+**/AppData/Local/OpenMeido/

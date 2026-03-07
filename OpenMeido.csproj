@@ -32,6 +32,7 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.3.0-preview.1.25161.3" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.3" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="9.0.3" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="9.0.3" />
@@ -76,7 +77,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="mcp_client_demo\**" />
+    <Compile Remove="OpenMeido.Tests\**" />
     <EmbeddedResource Remove="mcp_client_demo\**" />
+    <EmbeddedResource Remove="OpenMeido.Tests\**" />
     <None Remove="mcp_client_demo\**" />
+    <None Remove="OpenMeido.Tests\**" />
   </ItemGroup>
 </Project>
