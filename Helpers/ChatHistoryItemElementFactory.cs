@@ -12,12 +12,12 @@ namespace OpenMeido.Helpers
         {
             var border = new Border
             {
-                Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
+                Background = new SolidColorBrush(ThemeColors.GetUiColor("surface")),
+                BorderBrush = new SolidColorBrush(ThemeColors.GetUiColor("border_subtle")),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(5),
-                Margin = new Thickness(0, 2, 0, 2),
-                Padding = new Thickness(10, 8, 10, 8),
+                CornerRadius = new CornerRadius(12),
+                Margin = new Thickness(0, 0, 0, 8),
+                Padding = new Thickness(12, 10, 12, 10),
                 Cursor = Cursors.Hand
             };
 
@@ -28,24 +28,40 @@ namespace OpenMeido.Helpers
             var titleBlock = new TextBlock
             {
                 Text = title,
-                FontSize = 11,
-                Foreground = Brushes.Black,
-                VerticalAlignment = VerticalAlignment.Center
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(ThemeColors.GetUiColor("text_primary")),
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
             Grid.SetColumn(titleBlock, 0);
 
             var deleteButton = new Button
             {
-                Content = "❌",
+                Content = "✕",
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                FontSize = 10,
-                Padding = new Thickness(2),
+                Foreground = new SolidColorBrush(ThemeColors.GetUiColor("text_secondary")),
+                Width = 24,
+                Height = 24,
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Padding = new Thickness(0),
                 ToolTip = "删除此对话"
             };
             deleteButton.Click += (_, __) => onDelete?.Invoke();
             Grid.SetColumn(deleteButton, 1);
 
+            border.MouseEnter += (_, __) =>
+            {
+                border.Background = new SolidColorBrush(ThemeColors.GetUiColor("surface_muted"));
+                border.BorderBrush = new SolidColorBrush(ThemeColors.PrimaryLight);
+            };
+            border.MouseLeave += (_, __) =>
+            {
+                border.Background = new SolidColorBrush(ThemeColors.GetUiColor("surface"));
+                border.BorderBrush = new SolidColorBrush(ThemeColors.GetUiColor("border_subtle"));
+            };
             border.MouseLeftButtonDown += (_, __) => onOpen?.Invoke();
 
             grid.Children.Add(titleBlock);

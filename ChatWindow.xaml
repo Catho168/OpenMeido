@@ -1,6 +1,7 @@
 <Window x:Class="OpenMeido.ChatWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:OpenMeido.Controls"
         Title="妹抖酱对话" Height="600" Width="800"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
@@ -9,158 +10,24 @@
         AllowsTransparency="True"
         Background="Transparent"
         Icon="{x:Null}">
-    
-    <Window.Resources>
-        <!-- 用户消息样式 -->
-        <Style x:Key="UserMessageStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource MeidoThemeColor}"/>
-            <Setter Property="CornerRadius" Value="15"/>
-            <Setter Property="Padding" Value="15,10"/>
-            <Setter Property="Margin" Value="50,5,10,5"/>
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-        </Style>
-        
-        <!-- 消息样式 -->
-        <Style x:Key="AiMessageStyle" TargetType="Border">
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Margin" Value="10,5,50,5"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-        </Style>
-        
-        <!-- 消息文本样式 -->
-        <Style x:Key="MessageTextStyle" TargetType="TextBlock">
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="LineHeight" Value="18"/>
-            <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
-        </Style>
-        
-        <!-- 用户消息文本样式 -->
-        <Style x:Key="UserMessageTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MessageTextStyle}">
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        
-        <!-- 妹抖酱消息文本样式 -->
-        <Style x:Key="AiMessageTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MessageTextStyle}">
-            <Setter Property="Foreground" Value="Black"/>
-        </Style>
-        
-        <!-- 输入框样式 -->
-        <Style x:Key="InputTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Padding" Value="12"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="AcceptsReturn" Value="True"/>
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
-        </Style>
-        
-        <!-- 发送按钮样式 -->
-        <Style x:Key="SendButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource MeidoThemeColor}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource MeidoThemeColorLight}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource MeidoThemeColorDark}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
-        
-
-        
-
-        <!-- 标题栏按钮样式 -->
-        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="45"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#666666"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#E0E0E0"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#D0D0D0"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 关闭按钮特殊样式 -->
-        <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource MeidoThemeColor}"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource MeidoThemeColorDark}"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-    
     <!-- 主容器，带圆角 -->
-    <Border Background="White"
-            CornerRadius="12"
-            BorderBrush="{StaticResource MeidoThemeColor}"
-            BorderThickness="2"
+    <Border Background="#FFF7F7"
+            CornerRadius="18"
+            BorderBrush="#E8C4C5"
+            BorderThickness="1"
             UseLayoutRounding="True"
             SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#33000000" BlurRadius="24" ShadowDepth="6" Opacity="0.22"/>
+        </Border.Effect>
 
+        <Border Margin="1"
+                Background="#FFFDFD"
+                CornerRadius="17">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="40"/>  <!-- 自定义标题栏 -->
+                <RowDefinition Height="48"/>  <!-- 自定义标题栏 -->
                 <RowDefinition Height="Auto"/> <!-- 工具栏 -->
                 <RowDefinition Height="Auto"/> <!-- 历史记录面板 -->
                 <RowDefinition Height="*"/>    <!-- 聊天区域 -->
@@ -168,293 +35,34 @@
             </Grid.RowDefinitions>
 
             <!-- 自定义标题栏 -->
-            <Border Grid.Row="0"
-                    Background="{StaticResource MeidoThemeColor}"
-                    CornerRadius="10,10,0,0"
-                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
-                    UseLayoutRounding="True"
-                    SnapsToDevicePixels="True">
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- 标题文本 -->
-                    <StackPanel Grid.Column="0"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="15,0,0,0">
-                        <TextBlock Text="💬" FontSize="16" Foreground="White" Margin="0,0,8,0"/>
-                        <TextBlock Text="妹抖酱"
-                                   FontSize="14"
-                                   FontWeight="Bold"
-                                   Foreground="White"
-                                   VerticalAlignment="Center"/>
-                        <TextBlock x:Name="StatusTextBlock"
-                                   Text="{Binding StatusText}"
-                                   FontSize="11"
-                                   Foreground="White"
-                                   VerticalAlignment="Center"
-                                   Opacity="0.8" Margin="6,0,0,0"/>
-                    </StackPanel>
-
-                    <!-- 窗口控制按钮 -->
-                    <Button Grid.Column="1"
-                            x:Name="MinimizeButton"
-                            Style="{StaticResource TitleBarButtonStyle}"
-                            Foreground="White"
-                            Click="MinimizeButton_Click"
-                            ToolTip="最小化">
-                        <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" />
-                    </Button>
-
-                    <Button Grid.Column="2"
-                            x:Name="CloseButton"
-                            Style="{StaticResource CloseButtonStyle}"
-                            Foreground="White"
-                            Click="CloseButton_Click"
-                            ToolTip="关闭">
-                        <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" />
-                    </Button>
-                </Grid>
-            </Border>
+            <controls:ChatTitleBarControl x:Name="TitleBarHost"
+                                          Grid.Row="0"/>
 
             <!-- 工具栏 -->
-            <Border Grid.Row="1" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
-                <Grid Margin="15,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="HistoryToggleButton"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Padding="0"
-                                Margin="0,0,8,0"
-                                Click="HistoryToggleButton_Click"
-                                ToolTip="展开/折叠历史记录">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="HistoryToggleIcon" Text="📁" FontSize="14" Margin="0,0,4,0"/>
-                                <TextBlock x:Name="CurrentSessionTitle" Text="{Binding CurrentSessionTitle}" FontSize="12" VerticalAlignment="Center" Foreground="#666"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button x:Name="McpStatusButton" Content="MCP状态"
-                                Padding="8,4" Margin="5,0"
-                                Background="Transparent"
-                                BorderBrush="{StaticResource MeidoThemeColor}"
-                                BorderThickness="1"
-                                Foreground="{StaticResource MeidoThemeColor}"
-                                Click="McpStatusButton_Click"
-                                ToolTip="查看MCP服务器和工具状态"/>
-
-                        <Button x:Name="ClearButton" Content="清空对话"
-                                Padding="8,4" Margin="5,0"
-                                Background="Transparent"
-                                BorderBrush="{StaticResource MeidoThemeColor}"
-                                BorderThickness="1"
-                                Foreground="{StaticResource MeidoThemeColor}"
-                                Click="ClearButton_Click"
-                                ToolTip="清空所有对话记录"/>
-
-                        <Button x:Name="SettingsButton" Content="设置"
-                                Padding="8,4" Margin="5,0"
-                                Background="{StaticResource MeidoThemeColor}"
-                                BorderThickness="0"
-                                Foreground="White"
-                                Click="SettingsButton_Click"
-                                ToolTip="打开AI助手设置"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <controls:ChatToolbarControl x:Name="ToolbarHost"
+                                         Grid.Row="1"/>
 
             <!-- 历史记录面板 -->
-            <Border x:Name="HistoryPanel"
-                    Grid.Row="2"
-                    Background="#FAFAFA"
-                    BorderBrush="#E0E0E0"
-                    BorderThickness="0,0,0,1"
-                    Height="0"
-                    ClipToBounds="True">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Margin="15,10">
-                    <StackPanel x:Name="HistoryListPanel">
-                        <!-- 历史记录项在这里动态添加 -->
-                        <TextBlock Text="📚 聊天历史"
-                                   FontSize="14"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource MeidoThemeColor}"
-                                   Margin="0,0,0,10"/>
-
-                        <Button x:Name="NewChatButton"
-                                Content="➕ 新建对话"
-                                Background="{StaticResource MeidoThemeColor}"
-                                Foreground="White"
-                                BorderThickness="0"
-                                Padding="10,6"
-                                Margin="0,0,0,10"
-                                Click="NewChatButton_Click"
-                                ToolTip="开始新的对话"/>
-
-                        <!-- 历史记录列表容器 -->
-                        <StackPanel x:Name="HistoryItemsPanel">
-                            <!-- 历史记录项在这里动态添加 -->
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
+            <controls:ChatHistoryPanelControl x:Name="HistoryPanelHost"
+                                              Grid.Row="2"
+                                              Visibility="Collapsed"
+                                              IsHitTestVisible="False"/>
 
             <!-- MCP状态面板 -->
-            <Border x:Name="McpStatusPanel"
-                    Grid.Row="2"
-                    Background="#F0F8FF"
-                    BorderBrush="#B0C4DE"
-                    BorderThickness="0,0,0,1"
-                    Height="0"
-                    ClipToBounds="True">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Margin="15,10">
-                    <StackPanel x:Name="McpStatusContent">
-                        <!-- MCP状态标题 -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="🔧 MCP工具状态"
-                                       FontSize="14"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource MeidoThemeColor}"
-                                       VerticalAlignment="Center"/>
-                            <Button x:Name="RefreshMcpButton"
-                                    Content="🔄"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    FontSize="12"
-                                    Margin="10,0,0,0"
-                                    Padding="5"
-                                    Click="RefreshMcpButton_Click"
-                                    ToolTip="刷新MCP状态"/>
-
-                        </StackPanel>
-
-                        <!-- MCP服务器列表 -->
-                        <StackPanel x:Name="McpServersPanel">
-                            <!-- MCP服务器状态项在这里动态添加 -->
-                        </StackPanel>
-
-                        <!-- MCP工具列表 -->
-                        <TextBlock Text="📋 可用工具"
-                                   FontSize="13"
-                                   FontWeight="Bold"
-                                   Foreground="#666"
-                                   Margin="0,15,0,10"/>
-                        <StackPanel x:Name="McpToolsPanel">
-                            <!-- MCP工具项在这里动态添加 -->
-                        </StackPanel>
-
-                        <!-- MCP活动日志 -->
-                        <StackPanel Orientation="Horizontal" Margin="0,15,0,10">
-                            <TextBlock Text="📊 活动日志"
-                                       FontSize="13"
-                                       FontWeight="Bold"
-                                       Foreground="#666"
-                                       VerticalAlignment="Center"/>
-                            <Button x:Name="ClearMcpLogButton"
-                                    Content="清空"
-                                    Background="Transparent"
-                                    BorderBrush="#999"
-                                    BorderThickness="1"
-                                    FontSize="10"
-                                    Padding="5,2"
-                                    Margin="10,0,0,0"
-                                    Click="ClearMcpLogButton_Click"
-                                    ToolTip="清空MCP活动日志"/>
-                        </StackPanel>
-                        <Border Background="#FAFAFA"
-                                BorderBrush="#DDD"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                MaxHeight="200">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          Padding="8">
-                                <StackPanel x:Name="McpActivityPanel">
-                                    <!-- MCP活动记录在这里动态添加 -->
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
+            <controls:McpStatusPanelControl x:Name="McpStatusPanelHost"
+                                            Grid.Row="2"
+                                            Visibility="Collapsed"
+                                            IsHitTestVisible="False"/>
 
             <!-- 聊天消息区域 -->
-            <ScrollViewer Grid.Row="3" x:Name="ChatScrollViewer"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          Background="White">
-                <StackPanel x:Name="MessagesPanel" Margin="15">
-                    <!-- 消息动态添加 -->
-                </StackPanel>
-            </ScrollViewer>
+            <controls:ChatMessageListControl x:Name="MessageListHost"
+                                             Grid.Row="3"/>
 
             <!-- 底部输入区域 -->
-            <Border Grid.Row="4"
-                    Background="#F8F8F8"
-                    BorderBrush="#E0E0E0"
-                    BorderThickness="0,1,0,0"
-                    CornerRadius="0,0,12,12">
-            <Grid Margin="15">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- 工具建议面板 -->
-                    <RowDefinition Height="*"/>    <!-- 输入框 -->
-                    <RowDefinition Height="Auto"/> <!-- 发送按钮 -->
-                </Grid.RowDefinitions>
-
-                <!-- 输入框 -->
-                <Grid Grid.Row="1">
-                    <TextBox x:Name="InputTextBox"
-                             Style="{StaticResource InputTextBoxStyle}"
-                             MaxHeight="100"
-                             Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             IsEnabled="{Binding IsInputEnabled}"
-                             KeyDown="InputTextBox_KeyDown"
-                             TextChanged="InputTextBox_TextChanged"/>
-                    <TextBlock x:Name="PlaceholderTextBlock"
-                               Text="想和妹抖酱聊什么呢~"
-                               Foreground="Gray"
-                               FontSize="12"
-                               Margin="15,12,12,8"
-                               IsHitTestVisible="False"
-                               VerticalAlignment="Top"
-                               FontFamily="{StaticResource GlobalFontFamily}"/>
-                </Grid>
-                
-                <!-- 发送按钮和提示 -->
-                <Grid Grid.Row="2" Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <TextBlock Grid.Column="0" Text="按 Ctrl+Enter 发送消息" 
-                               FontSize="10" Foreground="Gray" 
-                               VerticalAlignment="Center"/>
-                    
-                    <Button x:Name="SendButton" Grid.Column="1"
-                            Content="发送" 
-                            Style="{StaticResource SendButtonStyle}"
-                            IsEnabled="{Binding CanSend}"
-                            Click="SendButton_Click"
-                            IsDefault="True"/>
-                </Grid>
-            </Grid>
-        </Border>
+            <controls:ChatInputPanelControl x:Name="InputPanelHost"
+                                            Grid.Row="4"/>
 
         </Grid>
+        </Border>
     </Border>
 </Window>

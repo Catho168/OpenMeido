@@ -7,8 +7,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using OpenMeido.Infrastructure;
 using OpenMeido.Models;
 using OpenMeido.Services;
+using OpenMeido.Services.Interfaces;
 using OpenMeido.ViewModels;
 
 namespace OpenMeido
@@ -18,6 +20,7 @@ namespace OpenMeido
     public partial class SettingsWindow : Window
     {
         private readonly SettingsViewModel _viewModel;
+        private readonly IMcpServiceFactory _mcpServiceFactory;
 
         // 存储当前的应用程序设置
         private AppSettings currentSettings;
@@ -32,19 +35,25 @@ namespace OpenMeido
         private ObservableCollection<McpServerConfig> mcpServers;
 
         // MCP服务实例，用于测试连接
-        private McpService mcpService;
+        private IMcpService mcpService;
 
         // 当前选中的设置分类
         private SettingsCategory currentCategory = SettingsCategory.General;
 
         /// 构造函数，初始化设置窗口
-        public SettingsWindow() : this(ResolveViewModel())
+        public SettingsWindow() : this(UiDependencyResolver.ResolveSettingsViewModel(), UiDependencyResolver.ResolveMcpServiceFactory())
         {
         }
 
         public SettingsWindow(SettingsViewModel viewModel)
+            : this(viewModel, UiDependencyResolver.ResolveMcpServiceFactory())
         {
-            _viewModel = viewModel ?? ResolveViewModel();
+        }
+
+        public SettingsWindow(SettingsViewModel viewModel, IMcpServiceFactory mcpServiceFactory)
+        {
+            _viewModel = viewModel ?? UiDependencyResolver.ResolveSettingsViewModel();
+            _mcpServiceFactory = mcpServiceFactory ?? UiDependencyResolver.ResolveMcpServiceFactory();
 
             InitializeComponent();
             DataContext = _viewModel;
@@ -61,13 +70,6 @@ namespace OpenMeido
 
             // 初始化分类导航
             InitializeCategoryNavigation();
-        }
-
-        private static SettingsViewModel ResolveViewModel()
-        {
-            var appServices = (Application.Current as App)?.Services;
-            var viewModel = appServices?.GetService(typeof(SettingsViewModel)) as SettingsViewModel;
-            return viewModel ?? new SettingsViewModel(new SettingsService());
         }
 
         /// 加载当前应用程序设置到界面控件
@@ -253,7 +255,7 @@ namespace OpenMeido
 
                 currentSettings = GetSettingsFromUI();
                 settingsSaved = true;
-                mcpService = new McpService(currentSettings);
+                ReplaceMcpService(currentSettings);
                 
                 // 只有在窗口未关闭时才显示消息框
                 if (!isClosing)
@@ -299,7 +301,7 @@ namespace OpenMeido
             {
                 currentSettings = GetSettingsFromUI();
                 settingsSaved = true;
-                mcpService = new McpService(currentSettings);
+                ReplaceMcpService(currentSettings);
             }
             else if (result.Status == SettingsOperationStatus.ValidationError)
             {
@@ -356,6 +358,11 @@ namespace OpenMeido
                     isClosing = false;
                 }
                 // 如果用户选择No，直接关闭窗口，不保存更改
+            }
+
+            if (!e.Cancel)
+            {
+                CleanupMcpService();
             }
         }
 
@@ -427,7 +434,7 @@ namespace OpenMeido
                 mcpServers = _viewModel.McpServers;
 
                 // 初始化MCP服务
-                mcpService = new McpService(GetSettingsFromUI());
+                ReplaceMcpService(GetSettingsFromUI());
 
                 // 更新MCP面板可见性
                 UpdateMcpPanelVisibility();
@@ -656,7 +663,7 @@ namespace OpenMeido
 
                 try
                 {
-                    mcpService = new McpService(GetSettingsFromUI());
+                    ReplaceMcpService(GetSettingsFromUI());
                     var (success, message) = await mcpService.TestConnectionAsync(server);
 
                     MessageBox.Show(message, success ? "连接成功" : "连接失败",
@@ -672,6 +679,25 @@ namespace OpenMeido
                     button.Content = "测试";
                     button.IsEnabled = true;
                 }
+            }
+        }
+
+        private void ReplaceMcpService(AppSettings settings)
+        {
+            CleanupMcpService();
+            mcpService = _mcpServiceFactory.Create(settings);
+        }
+
+        private void CleanupMcpService()
+        {
+            try
+            {
+                mcpService?.Dispose();
+                mcpService = null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"清理设置窗口MCP资源失败: {ex.Message}");
             }
         }
 
@@ -714,6 +740,7 @@ namespace OpenMeido
         /// 窗口关闭时清理资源
         protected override void OnClosed(EventArgs e)
         {
+            CleanupMcpService();
             base.OnClosed(e);
         }
     }

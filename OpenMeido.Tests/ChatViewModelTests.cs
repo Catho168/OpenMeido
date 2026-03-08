@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using OpenMeido.Helpers;
 using OpenMeido.Services.Interfaces;
 using OpenMeido.ViewModels;
 
@@ -39,7 +40,7 @@ public sealed class ChatViewModelTests
         Assert.False(viewModel.CanSend);
         Assert.Equal(string.Empty, viewModel.InputText);
         Assert.Equal("妹抖酱思考ing...", viewModel.StatusText);
-        Assert.Equal("processing", viewModel.StatusType);
+        Assert.Equal(ChatStatusTypes.Processing, viewModel.StatusType);
     }
 
     [Fact]
@@ -69,6 +70,6 @@ public sealed class ChatViewModelTests
         await viewModel.InitializeAsync();
 
         Assert.Equal("需要配置API", viewModel.StatusText);
-        Assert.Equal("warning", viewModel.StatusType);
+        Assert.Equal(ChatStatusTypes.Warning, viewModel.StatusType);
     }
 }

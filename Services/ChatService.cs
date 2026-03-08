@@ -9,7 +9,16 @@ namespace OpenMeido.Services
 {
     public class ChatService : IChatService
     {
-        public ApiService CurrentApiService { get; private set; }
+        private readonly ISettingsService _settingsService;
+        private readonly IApiServiceFactory _apiServiceFactory;
+
+        public ChatService(ISettingsService settingsService, IApiServiceFactory apiServiceFactory)
+        {
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _apiServiceFactory = apiServiceFactory ?? throw new ArgumentNullException(nameof(apiServiceFactory));
+        }
+
+        public IApiService CurrentApiService { get; private set; }
 
         public async Task<ChatServiceInitializationResult> InitializeAsync()
         {
@@ -17,13 +26,13 @@ namespace OpenMeido.Services
 
             try
             {
-                var settings = AppSettings.Load();
+                var settings = _settingsService.Load();
                 if (settings?.IsValid() != true)
                 {
                     return ChatServiceInitializationResult.Warning("需要配置API");
                 }
 
-                CurrentApiService = new ApiService(settings);
+                CurrentApiService = _apiServiceFactory.Create(settings);
                 if (settings.EnableMcp)
                 {
                     await CurrentApiService.InitializeMcpAsync();

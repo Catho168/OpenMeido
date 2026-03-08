@@ -12,6 +12,8 @@ namespace OpenMeido.Infrastructure.DI
         {
             var services = new ServiceCollection();
 
+            services.AddSingleton<IMcpServiceFactory, McpServiceFactory>();
+            services.AddSingleton<IApiServiceFactory, ApiServiceFactory>();
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<MainWindow>();
             services.AddTransient<IChatService, ChatService>();

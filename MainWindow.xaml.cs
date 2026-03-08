@@ -1,12 +1,8 @@
-﻿﻿﻿﻿﻿// 系统运行时互操作服务，用于调用Windows API函数
-using System.Runtime.InteropServices;
-// WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
+﻿﻿﻿// WPF窗口互操作功能，用于获取窗口句柄和处理Windows消息
 using System.Windows.Interop;
 using System.Windows.Media.Media3D;
 using System.Windows;
 using System;
-// 进程管理功能，用于启动外部程序
-using System.Diagnostics;
 // 泛型集合功能，用于存储和管理菜单项列表
 using System.Collections.Generic;
 // WPF控件功能，如按钮、画布等UI元素
@@ -24,8 +20,10 @@ using System.Linq;
 // 引入任务以便异步等待关闭动画完成
 using System.Threading.Tasks;
 using System.Windows.Controls.Primitives;
+using OpenMeido.Infrastructure;
 using OpenMeido.Models;
 using OpenMeido.Services;
+using OpenMeido.Services.Interfaces;
 using OpenMeido.Helpers;
 using OpenMeido.ViewModels;
 
@@ -37,95 +35,44 @@ namespace OpenMeido
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
-
-        // 定义全局热键的唯一标识符，用于在系统中注册和识别我们的热键
-        // const表示编译时常量，值在编译后不可更改
-        const int HOTKEY_ID = 9000;
-
-        // 定义Alt键的修饰符常量，0x0001是Windows API中Alt键的十六进制值
-        // uint表示无符号32位整数，与Windows API的参数类型保持一致
-        const uint MOD_ALT = 0x0001;
-
-        // 定义R键的虚拟键码，0x52是字母R在Windows虚拟键码表中的十六进制值
-        const uint VK_R = 0x52;
-
-        // 使用P/Invoke技术声明Windows API函数RegisterHotKey
-        // DllImport特性告诉.NET运行时从user32.dll动态链接库中导入此函数
-        // static extern表示这是一个外部静态方法，由操作系统提供实现
-        [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        // 声明取消注册热键的Windows API函数，用于程序退出时清理资源
-        [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        // 声明私有字段存储径向菜单项列表，使用泛型List提供动态数组功能
-        // private确保只有当前类可以访问此字段，实现封装原则
-        private List<RadialMenuItem> menuItems = new List<RadialMenuItem>();
+        private readonly MainWindowMcpStatusCoordinator _mcpStatusCoordinator;
+        private readonly MainWindowHotkeyCoordinator _hotkeyCoordinator;
+        private readonly MainWindowCommandCoordinator _commandCoordinator;
+        private readonly MainWindowMiniChatPopupCoordinator _miniChatPopupCoordinator;
+        private readonly MainWindowVisualCoordinator _visualCoordinator;
+        private readonly MainWindowInteractionCoordinator _interactionCoordinator;
 
         // 独立的径向菜单控件实例
-        private RadialMenuControl _radialMenu;
+        private readonly RadialMenuControl _radialMenu;
 
         // 内容平移变换与动画状态
         private readonly TranslateTransform _contentShift = new TranslateTransform();
-        private const double MAX_WINDOW_SHIFT = 7; // 窗口随鼠标漂移的最大像素
-        private bool _isClosingAnimationRunning = false;
-
-        //迷你聊天相关字段
-        private bool _isMiniChatOpen = false;          // 迷你聊天是否打开
-        private int _miniChatRoundCount = 0;           // 对话轮次
-        private Border _miniChatContainer;             // 聊天UI容器
-        private TextBox _miniChatInput;                // 输入框
-        private StackPanel _miniChatPanel;             // 显示问答气泡
-        private ApiService _miniApiService;            // 复用 ApiService
-        private AppSettings _miniSettings;             // 设置
-        private List<ChatMessage> _miniChatHistory = new List<ChatMessage>();
-        private Popup _miniChatPopup;                  // Popup 用于承载迷你聊天框
-
-        // MCP状态监控相关字段
-        private System.Windows.Threading.DispatcherTimer _mcpStatusTimer;
-        private McpService _mcpService;
-
-        // 妹抖酱待机/聊天图片路径常量
-        private const string MeidoStandbyImagePath = "Assets/Meido/Meido_standby.png";
-        private const string MeidoChattingImagePath = "Assets/Meido/Meido_chatting.png";
-
-        // 设置妹抖酱图片辅助方法
-        private void SetMeidoImage(string relativePath)
-        {
-            if (MeidoImage == null) return;
-            try
-            {
-                // 使用 Pack URI 格式加载程序集内嵌资源，避免路径解析问题
-                var packUri = new Uri($"pack://application:,,,/{relativePath}", UriKind.Absolute);
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = packUri;
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-                MeidoImage.Source = bitmap;
-            }
-            catch
-            {
-                // Fallback：尝试以站点路径相对方式加载
-                try
-                {
-                    MeidoImage.Source = new BitmapImage(new Uri(relativePath, UriKind.RelativeOrAbsolute));
-                }
-                catch
-                {
-                    // 忽略错误
-                }
-            }
-        }
 
         // 主窗口构造函数，在创建MainWindow实例时自动调用
         // public表示外部代码可以创建此类的实例
-        public MainWindow() : this(ResolveViewModel())
+        public MainWindow() : this(UiDependencyResolver.ResolveMainViewModel(), UiDependencyResolver.ResolveSettingsService(), UiDependencyResolver.ResolveApiServiceFactory(), UiDependencyResolver.ResolveMcpServiceFactory())
         {
         }
 
         public MainWindow(MainViewModel viewModel)
+            : this(viewModel, UiDependencyResolver.ResolveSettingsService(), UiDependencyResolver.ResolveApiServiceFactory(), UiDependencyResolver.ResolveMcpServiceFactory())
         {
-            _viewModel = viewModel ?? new MainViewModel();
+        }
+
+        public MainWindow(MainViewModel viewModel, ISettingsService settingsService, IApiServiceFactory apiServiceFactory)
+            : this(viewModel, settingsService, apiServiceFactory, UiDependencyResolver.ResolveMcpServiceFactory())
+        {
+        }
+
+        public MainWindow(MainViewModel viewModel, ISettingsService settingsService, IApiServiceFactory apiServiceFactory, IMcpServiceFactory mcpServiceFactory, IMainWindowHotkeyPlatform hotkeyPlatform = null, IMainWindowCommandPlatform commandPlatform = null, IMainWindowInteractionPlatform interactionPlatform = null)
+        {
+            _viewModel = viewModel ?? UiDependencyResolver.ResolveMainViewModel();
+
+            var resolvedSettingsService = settingsService ?? UiDependencyResolver.ResolveSettingsService();
+            var resolvedMcpServiceFactory = mcpServiceFactory ?? UiDependencyResolver.ResolveMcpServiceFactory();
+            _mcpStatusCoordinator = new MainWindowMcpStatusCoordinator(_viewModel, resolvedSettingsService, resolvedMcpServiceFactory);
+            _hotkeyCoordinator = new MainWindowHotkeyCoordinator(hotkeyPlatform);
+            _commandCoordinator = new MainWindowCommandCoordinator(this, commandPlatform);
 
             // InitializeComponent() 由XAML编译器自动调用，无需手动处理
             InitializeComponent();
@@ -147,20 +94,17 @@ namespace OpenMeido
 
             // 订阅鼠标移动事件，this关键字明确指向当前窗口实例
             // 当鼠标在窗口内移动时会持续触发此事件
-            this.MouseMove += GlobalMouseTracker;
+            MouseMove += (_, e) => _interactionCoordinator.HandleMouseMove(e.GetPosition(this));
 
             // 订阅鼠标离开窗口事件，用于实现自动隐藏功能
-            this.MouseLeave += WindowHider;
-
-            // 使用集合初始化语法创建并初始化菜单项列表
-            menuItems = _viewModel.MenuItems.ToList();
+            MouseLeave += (_, __) => _ = _interactionCoordinator.HandleMouseLeaveAsync();
 
             //创建独立的径向菜单控件
             _radialMenu = new RadialMenuControl
             {
-                MenuItems = menuItems,
+                MenuItems = _viewModel.MenuItems.ToList(),
                 OnMenuCommand = ExecuteCommand,
-                IsMiniChatOpen = _isMiniChatOpen,
+                IsMiniChatOpen = _viewModel.IsMiniChatOpen,
                 IsHitTestVisible = true,
             };
 
@@ -173,68 +117,73 @@ namespace OpenMeido
                 Canvas.SetZIndex(_radialMenu, 1);
             }
 
+            _visualCoordinator = new MainWindowVisualCoordinator(
+                _contentShift,
+                MainCanvas,
+                MeidoImage,
+                _radialMenu);
+
+            _miniChatPopupCoordinator = new MainWindowMiniChatPopupCoordinator(
+                _viewModel,
+                _contentShift,
+                MiniChatPopup,
+                MiniChatControl,
+                MeidoImage,
+                MainCanvas,
+                _radialMenu,
+                _visualCoordinator.ShowStandbyImage,
+                _visualCoordinator.ShowChattingImage,
+                _visualCoordinator.PositionMeidoInCenter);
+
+            _visualCoordinator.ConnectMiniChat(
+                () => _miniChatPopupCoordinator.IsOpen,
+                _miniChatPopupCoordinator.Position,
+                _miniChatPopupCoordinator.HidePopupContent,
+                _miniChatPopupCoordinator.Hide);
+
+            _interactionCoordinator = new MainWindowInteractionCoordinator(
+                this,
+                _contentShift,
+                mousePosition => _radialMenu.UpdateButtonScales(mousePosition),
+                RefreshRadialMenuLayout,
+                () => _miniChatPopupCoordinator.IsOpen,
+                () => _visualCoordinator.PlayCloseAnimationAsync(Hide),
+                interactionPlatform);
+
             // 使用Lambda表达式订阅Loaded事件，当窗口加载完成后生成径向按钮
             // (s, e) => 是Lambda表达式语法，s代表sender，e代表事件参数
-            Loaded += (s, e) => GenerateRadialButtons();
+            Loaded += (s, e) => RefreshRadialMenuLayout();
 
             // 订阅窗口大小改变事件，确保按钮布局能够适应窗口尺寸变化
             // 这实现了响应式设计，保证用户界面在不同窗口大小下都能正常显示
-            SizeChanged += (s, e) => GenerateRadialButtons();
+            SizeChanged += (s, e) => RefreshRadialMenuLayout();
 
             // 订阅妹抖酱点击事件
             if (MeidoImage != null)
             {
-                MeidoImage.MouseLeftButtonDown += (_, __) => ToggleMiniChat();
+                MeidoImage.MouseLeftButtonDown += (_, __) => _miniChatPopupCoordinator.Toggle();
             }
+
+            if (MiniChatControl != null)
+            {
+                MiniChatControl.SizeChanged += (_, __) => _miniChatPopupCoordinator.Position();
+            }
+
+            _viewModel.MiniChat.EscalationRequested += MiniChat_EscalationRequested;
 
             // 初始化MCP状态监控
             InitializeMcpStatusMonitoring();
         }
 
-        private static MainViewModel ResolveViewModel()
+        private void MiniChat_EscalationRequested(object sender, MiniChatEscalationRequestedEventArgs e)
         {
-            if (Application.Current is App app)
-            {
-                return app.Services?.GetService(typeof(MainViewModel)) as MainViewModel ?? new MainViewModel();
-            }
-
-            return new MainViewModel();
-        }
-
-        // 窗口隐藏事件处理器，当鼠标离开窗口时自动隐藏窗口
-        // private访问修饰符确保只有当前类可以调用此方法
-        private void WindowHider(object sender, MouseEventArgs e)
-        {
-            // 如果迷你聊天栏已打开，则不自动关闭
-            if (!_isMiniChatOpen)
-            {
-                // 触发关闭动画，而不是立即隐藏
-                StartCloseAnimation();
-            }
-        }
-
-        // 全局鼠标跟踪事件处理器，实现鼠标悬停时按钮的动态缩放效果
-        private void GlobalMouseTracker(object sender, MouseEventArgs e)
-        {
-            // 获取鼠标在窗口中的逻辑坐标
-            Point windowMousePos = e.GetPosition(this);
-
-            // 如果迷你聊天栏打开，则不处理按钮缩放，防止覆盖位移
-            if (_isMiniChatOpen) return;
-
-            // 根据鼠标位置计算窗口需要的轻微偏移量
-            double centerX = ActualWidth / 2;
-            double centerY = ActualHeight / 2;
-            double offsetX = (windowMousePos.X - centerX) / centerX * MAX_WINDOW_SHIFT;
-            double offsetY = (windowMousePos.Y - centerY) / centerY * MAX_WINDOW_SHIFT;
-            _contentShift.X = offsetX;
-            _contentShift.Y = offsetY;
-
-            // 让径向菜单控件自行处理按钮缩放
-            if (_radialMenu != null)
-            {
-                _radialMenu.UpdateButtonScales(windowMousePos);
-            }
+            _commandCoordinator.Execute(
+                MenuCommands.OpenAiChat,
+                e.History.ToList(),
+                HideMainWindowContent,
+                RestoreMainWindowContent,
+                () => { });
+            _miniChatPopupCoordinator.Hide();
         }
 
         // 主窗口加载完成事件处理器，在窗口完全初始化后执行
@@ -249,1022 +198,95 @@ namespace OpenMeido
             // 句柄是一个指针，指向Windows内核中的窗口对象
             var hwnd = helper.Handle;
 
-            // 从窗口句柄创建HwndSource对象，用于处理Windows消息
-            // HwndSource是WPF中处理底层Windows消息的核心类
-            HwndSource source = HwndSource.FromHwnd(hwnd);
-
-            // 添加消息钩子，将我们的消息处理函数注册到Windows消息循环中
-            // 这样就能接收到系统发送给窗口的所有消息，包括热键消息
-            source.AddHook(HwndHook);
-
-            // 调用Windows API注册全局热键 Alt+R
-            // 参数说明：hwnd-窗口句柄，HOTKEY_ID-热键标识符，MOD_ALT-Alt修饰键，VK_R-R键
-            RegisterHotKey(hwnd, HOTKEY_ID, MOD_ALT, VK_R);
+            _hotkeyCoordinator.Attach(hwnd, _interactionCoordinator.ShowAtMouse);
         }
 
         // 主窗口关闭事件处理器，负责清理系统资源
         // CancelEventArgs允许取消关闭操作，但这里我们只是清理资源
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // 获取窗口句柄，使用链式调用简化代码
-            var hwnd = new WindowInteropHelper(this).Handle;
+            _hotkeyCoordinator.Dispose();
 
-            // 取消注册热键，释放系统资源
-            // 全局热键是系统级资源，不释放会导致资源泄漏
-            UnregisterHotKey(hwnd, HOTKEY_ID);
+            // 清理迷你聊天 API 资源
+            CleanupMiniChatResources();
 
             // 清理MCP资源
             CleanupMcpResources();
         }
 
-        // Windows消息钩子处理函数，处理系统发送给窗口的消息
-        // 这是一个底层的消息处理机制，直接与Windows消息循环交互
-        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        // 刷新径向菜单布局，主窗口仅负责宿主级协调。
+        private void RefreshRadialMenuLayout()
         {
-            // 定义热键消息的常量值，0x0312是Windows系统中WM_HOTKEY消息的标识符
-            const int WM_HOTKEY = 0x0312;
-
-            // 检查是否收到热键消息，并且是我们注册的热键
-            // msg是消息类型，wParam包含热键ID
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
-            {
-                // 调用显示窗口的方法
-                ShowAtMouse();
-
-                // 设置handled为true，告诉系统我们已经处理了这个消息
-                // 这防止消息继续传播到其他处理器
-                handled = true;
-            }
-
-            // 返回IntPtr.Zero表示消息处理完成
-            // 这是Windows消息处理的标准返回值
-            return IntPtr.Zero;
-        }
-
-        // 在鼠标当前位置显示窗口的核心方法
-        // 这个方法处理了DPI缩放、坐标转换等复杂的显示逻辑
-        private void ShowAtMouse()
-        {
-            // 获取当前窗口的呈现源，用于DPI缩放计算
-            // PresentationSource是WPF中连接逻辑坐标和物理坐标的桥梁
-            PresentationSource source = PresentationSource.FromVisual(this);
-
-            // 初始化DPI缩放因子，默认值1.0表示100%缩放（96 DPI）
-            double dpiX = 1.0, dpiY = 1.0;
-
-            // 检查呈现源和合成目标是否存在，使用空条件运算符?.避免空引用异常
-            if (source?.CompositionTarget != null)
-            {
-                // 获取设备变换矩阵的缩放因子
-                // M11和M22分别是X轴和Y轴的缩放比例，用于DPI感知计算
-                dpiX = source.CompositionTarget.TransformToDevice.M11;
-                dpiY = source.CompositionTarget.TransformToDevice.M22;
-            }
-
-            // 获取鼠标在屏幕上的物理像素位置
-            // System.Windows.Forms.Cursor.Position返回的是物理像素坐标
-            var screenPos = System.Windows.Forms.Cursor.Position;
-
-            // 将物理像素坐标转换为WPF的逻辑像素坐标
-            double logicalX = screenPos.X / dpiX;
-            double logicalY = screenPos.Y / dpiY;
-
-            // 计算窗口位置，使窗口中心对准鼠标位置
-            // ActualWidth和ActualHeight是窗口的实际渲染尺寸
-            Left = logicalX - ActualWidth / 2;
-            Top = logicalY - ActualHeight / 2;
-
-            // 显示窗口，从隐藏状态变为可见状态
-            Show();
-
-            // 重新生成径向按钮，防止关闭后按钮停留在中心
-            GenerateRadialButtons();
-
-            // 激活窗口，使其获得焦点并置于最前端
-            Activate();
-        }
-
-        // 生成径向分布按钮的主要方法，实现圆形菜单布局
-        // 这个方法在窗口加载和尺寸改变时被调用
-        private void GenerateRadialButtons()
-        {
-            if (MainCanvas != null)
-            {
-                MainCanvas.Children.Clear();
-
-                // 始终保持妹抖酱在中心
-                if (MeidoImage != null)
-                {
-                    MainCanvas.Children.Add(MeidoImage);
-                    PositionMeidoInCenter();
-                }
-
-                // 确保径向菜单控件已添加
-                if (_radialMenu != null && !MainCanvas.Children.Contains(_radialMenu))
-                {
-                    MainCanvas.Children.Add(_radialMenu);
-                    Canvas.SetLeft(_radialMenu, 0);
-                    Canvas.SetTop(_radialMenu, 0);
-                    Canvas.SetZIndex(_radialMenu, 1);
-                }
-            }
-
-            // 更新并重新生成按钮
-            if (_radialMenu != null)
-            {
-                _radialMenu.Width = ActualWidth;
-                _radialMenu.Height = ActualHeight;
-                _radialMenu.IsMiniChatOpen = _isMiniChatOpen;
-                _radialMenu.Regenerate();
-            }
-
-            // 在 MainCanvas 清空并重新添加中心妹抖图像后，如果迷你聊天开启则只需重新定位 Popup
-            if (_isMiniChatOpen)
-            {
-                PositionMiniChat();
-            }
-        }
-
-        // 计算按钮在圆周上位置的数学方法
-        // 使用极坐标系统将按钮均匀分布在圆周上
-        private Point CalculateButtonPosition(int index, int total, double radius, double startAngle = 0, double angleRange = 2 * Math.PI)
-        {
-            double angle;
-            if (total == 1)
-            {
-                // 仅有一个按钮时，直接放在圆弧中点
-                angle = startAngle + angleRange / 2;
-            }
-            else
-            {
-                // 当覆盖整圆（360°）时避免首尾重叠
-                if (Math.Abs(angleRange - 2 * Math.PI) < 0.0001)
-                {
-                    angle = startAngle + angleRange * index / total;
-                }
-                else
-                {
-                    // 非整圆时保持端点对齐，使两端按钮位于起始角和结束角
-                    angle = startAngle + angleRange * index / (total - 1);
-                }
-            }
-
-            // 计算窗口的中心点坐标，作为圆形布局的圆心
-            double centerX = ActualWidth / 2;
-            double centerY = ActualHeight / 2;
-
-            // 使用三角函数将极坐标转换为直角坐标
-            // Cos计算X轴分量，Sin(angle)计算Y轴分量
-            return new Point(
-                centerX + radius * Math.Cos(angle),
-                centerY + radius * Math.Sin(angle)
-            );
-        }
-
-        // 创建径向菜单按钮的工厂方法
-        // 根据菜单项数据创建配置好的按钮控件
-        private Button CreateRadialButton(RadialMenuItem item)
-        {
-            var button = new Button
-            {
-                Content = item.Icon,
-                ToolTip = item.ToolTip,
-                Width = 50,
-                Height = 50,
-                FontSize = 24,
-                RenderTransformOrigin = new Point(0.5, 0.5) // 设置变换原点为中心
-            };
-
-            // 从App.xaml中查找样式
-            Style radialButtonStyle = Application.Current.FindResource("RadialButtonStyle") as Style;
-            if (radialButtonStyle != null)
-            {
-                button.Style = radialButtonStyle;
-            }
-
-            // 关联点击事件以执行命令
-            button.Click += (sender, e) => ExecuteCommand(item.Command);
-
-            return button;
+            var width = GetActualOrConfiguredSize(ActualWidth, Width);
+            var height = GetActualOrConfiguredSize(ActualHeight, Height);
+            _visualCoordinator.RefreshLayout(width, height);
         }
 
         // 命令执行方法，根据不同的命令类型执行相应的操作
         // 这里使用了命令模式，将操作封装为命令对象
         private void ExecuteCommand(ICommand command)
         {
-            // 使用if-else链检查命令类型并执行相应操作
-            if (command == MenuCommands.OpenNotepad)
-            {
-                // 启动记事本
-                // Process.Start是.NET中启动外部程序的标准方法
-                Process.Start("notepad.exe");
-            }
-            else if (command == MenuCommands.LockWorkstation)
-            {
-                LockComputer();
-            }
-            else if (command == MenuCommands.OpenAiChat)
-            {
-                OpenAiChatWindow(new List<ChatMessage>(_miniChatHistory));
-            }
-            else if (command == MenuCommands.OpenSettings)
-            {
-                OpenSettingsWindow();
-            }
-            else
-            {
-                // 对于其他类型的命令，直接调用命令的Execute方法
-                // 这提供了扩展性，允许添加实现ICommand接口的自定义命令
-                command.Execute(null);
-            }
-
-            // 执行命令后隐藏窗口
-            // 用户选择操作后菜单自动消失
-            Hide();
-        }
-
-        // 声明Windows API函数LockWorkStation，用于锁定工作站
-        // DllImport特性指定从user32.dll导入此函数
-        // SetLastError = true允许我们获取详细的错误信息
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern void LockWorkStation();
-
-        private void LockComputer()
-        {
-            // 调用Windows API锁定工作站
-            LockWorkStation();
-        }
-
-        /// 打开聊天窗口
-        /// 如果窗口已存在则激活，否则创建新窗口
-        private void OpenAiChatWindow(List<ChatMessage> initialMessages)
-        {
-            try
-            {
-                // 在打开聊天窗口前，先隐藏主窗口内容
-                HideMainWindowContent();
-                
-                var appServices = (Application.Current as App)?.Services;
-                var chatWindow = appServices?.GetService(typeof(ChatWindow)) as ChatWindow ?? new ChatWindow();
-                chatWindow.Show();
-
-                // 追加历史
-                chatWindow.AppendMiniChatHistory(initialMessages);
-
-                chatWindow.Activate();
-                
-                // 监听聊天窗口关闭事件，恢复主窗口状态
-                chatWindow.Closed += (s, e) => RestoreMainWindowContent();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"无法打开妹抖酱的聊天窗口: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                // 如果打开失败，也要恢复主窗口状态
-                RestoreMainWindowContent();
-            }
-        }
-
-        /// 打开设置
-        private void OpenSettingsWindow()
-        {
-            try
-            {
-                // 在打开设置窗口前，先隐藏主窗口内容
-                HideMainWindowContent();
-                
-                // 创建窗口
-                var appServices = (Application.Current as App)?.Services;
-                var settingsWindow = appServices?.GetService(typeof(SettingsWindow)) as SettingsWindow ?? new SettingsWindow();
-                settingsWindow.Owner = this;
-
-                // 以模态对话框形式显示
-                // 确保用户完成设置操作后才能继续
-                settingsWindow.ShowDialog();
-                
-                // 设置窗口关闭后，恢复主窗口状态
-                RestoreMainWindowContent();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                RestoreMainWindowContent();
-            }
+            _commandCoordinator.Execute(
+                command,
+                _viewModel.MiniChat.GetHistorySnapshot(),
+                HideMainWindowContent,
+                RestoreMainWindowContent,
+                Hide);
         }
 
         /// 隐藏主窗口内容（女仆、按钮、迷你聊天等）
         private void HideMainWindowContent()
         {
-            // 隐藏女仆图片
-            if (MeidoImage != null)
-            {
-                MeidoImage.Visibility = Visibility.Hidden;
-            }
-            
-            // 隐藏径向菜单
-            if (_radialMenu != null)
-            {
-                _radialMenu.Visibility = Visibility.Hidden;
-            }
-            
-            // 隐藏所有径向按钮
-            foreach (Button btn in MainCanvas.Children.OfType<Button>())
-            {
-                btn.Visibility = Visibility.Hidden;
-            }
-            
-            // 隐藏迷你聊天容器
-            if (_miniChatContainer != null)
-            {
-                _miniChatContainer.Visibility = Visibility.Hidden;
-            }
+            _visualCoordinator.HideContent();
         }
 
         /// 恢复主窗口内容显示
         private void RestoreMainWindowContent()
         {
-            // 恢复女仆图片显示
-            if (MeidoImage != null)
-            {
-                MeidoImage.Visibility = Visibility.Visible;
-            }
-            
-            // 恢复径向菜单显示
-            if (_radialMenu != null)
-            {
-                _radialMenu.Visibility = Visibility.Visible;
-            }
-            
-            // 恢复所有径向按钮显示
-            foreach (Button btn in MainCanvas.Children.OfType<Button>())
-            {
-                btn.Visibility = Visibility.Visible;
-            }
-            
-            // 如果迷你聊天是打开状态，强制关闭并重置为待机状态
-            if (_isMiniChatOpen)
-            {
-                HideMiniChat();
-            }
-            
-            // 确保女仆图片显示为待机状态
-            SetMeidoImage(MeidoStandbyImagePath);
+            _visualCoordinator.RestoreContent();
         }
 
-        /// 将女仆定位到圆盘中心
-        private void PositionMeidoInCenter()
+        private static double GetActualOrConfiguredSize(double actualSize, double configuredSize)
         {
-            if (MeidoImage != null)
+            if (actualSize > 0)
             {
-                // 计算窗口中心位置
-                double centerX = ActualWidth / 2;
-                double centerY = ActualHeight / 2;
-
-                // 将女仆图片定位到中心
-                Canvas.SetLeft(MeidoImage, centerX - MeidoImage.Width / 2);
-                Canvas.SetTop(MeidoImage, centerY - MeidoImage.Height / 2);
-
-                // 添加入场动画
-                AnimateMeidoEntrance();
+                return actualSize;
             }
+
+            if (!double.IsNaN(configuredSize) && configuredSize > 0)
+            {
+                return configuredSize;
+            }
+
+            return 0;
         }
-
-        /// 入场动画效果
-        private void AnimateMeidoEntrance()
-        {
-            if (MeidoImage != null)
-            {
-                // 创建缩放动画
-                var scaleTransform = new ScaleTransform(0.1, 0.1);
-                MeidoImage.RenderTransform = scaleTransform;
-
-                // 缩放动画
-                var scaleAnimation = new DoubleAnimation
-                {
-                    From = 0.1,
-                    To = 1.0,
-                    Duration = TimeSpan.FromMilliseconds(500),
-                    EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 }
-                };
-
-                // 透明度动画
-                var opacityAnimation = new DoubleAnimation
-                {
-                    From = 0.0,
-                    To = 0.9,
-                    Duration = TimeSpan.FromMilliseconds(400)
-                };
-
-                // 开始动画
-                scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
-                scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
-                MeidoImage.BeginAnimation(OpacityProperty, opacityAnimation);
-            }
-        }
-
-        /// 女仆悬停动画
-        private void AnimateMeidoHover(bool isHovering)
-        {
-            if (MeidoImage != null)
-            {
-                var scaleTransform = MeidoImage.RenderTransform as ScaleTransform ?? new ScaleTransform();
-                MeidoImage.RenderTransform = scaleTransform;
-
-                double targetScale = isHovering ? 1.1 : 1.0;
-                double targetOpacity = isHovering ? 1.0 : 0.9;
-
-                var scaleAnimation = new DoubleAnimation
-                {
-                    To = targetScale,
-                    Duration = TimeSpan.FromMilliseconds(200),
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-                };
-
-                var opacityAnimation = new DoubleAnimation
-                {
-                    To = targetOpacity,
-                    Duration = TimeSpan.FromMilliseconds(200)
-                };
-
-                scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
-                scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
-                MeidoImage.BeginAnimation(OpacityProperty, opacityAnimation);
-            }
-        }
-
-        // 关闭动画
-        private async void StartCloseAnimation()
-        {
-            await StartCloseAnimationAsync();
-        }
-
-        // 关闭动画逻辑
-        private async Task StartCloseAnimationAsync()
-        {
-            if (_isClosingAnimationRunning) return;
-            _isClosingAnimationRunning = true;
-
-            const int durationMs = 120;
-            double centerX = ActualWidth / 2;
-            double centerY = ActualHeight / 2;
-
-            // 为每个径向按钮创建动画
-            foreach (Button btn in MainCanvas.Children.OfType<Button>())
-            {
-                // 组合变换：保留现有的缩放，再加入旋转与收缩
-                TransformGroup group = btn.RenderTransform as TransformGroup;
-                ScaleTransform scale = null;
-                if (group == null)
-                {
-                    group = new TransformGroup();
-                    if (btn.RenderTransform is ScaleTransform existingScale)
-                    {
-                        scale = existingScale;
-                        group.Children.Add(scale);
-                    }
-                    else
-                    {
-                        scale = new ScaleTransform(1, 1);
-                        group.Children.Add(scale);
-                    }
-                    var rotate = new RotateTransform(0);
-                    group.Children.Add(rotate);
-                    btn.RenderTransform = group;
-                    btn.RenderTransformOrigin = new Point(0.5, 0.5);
-                }
-                else
-                {
-                    // 查找/补充Scale与Rotate
-                    scale = group.Children.OfType<ScaleTransform>().FirstOrDefault() ?? new ScaleTransform(1, 1);
-                    if (!group.Children.Contains(scale)) group.Children.Insert(0, scale);
-                    if (!group.Children.OfType<RotateTransform>().Any())
-                    {
-                        group.Children.Add(new RotateTransform(0));
-                    }
-                }
-
-                RotateTransform rotateTransform = group.Children.OfType<RotateTransform>().First();
-
-                Storyboard sb = new Storyboard { Duration = TimeSpan.FromMilliseconds(durationMs) };
-
-                // 旋转动画
-                var rotateAnim = new DoubleAnimation(360, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(rotateAnim, rotateTransform);
-                Storyboard.SetTargetProperty(rotateAnim, new PropertyPath(RotateTransform.AngleProperty));
-                sb.Children.Add(rotateAnim);
-
-                // 缩放动画
-                var scaleAnim = new DoubleAnimation(0.0, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(scaleAnim, scale);
-                Storyboard.SetTargetProperty(scaleAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
-                sb.Children.Add(scaleAnim);
-                var scaleAnimY = scaleAnim.Clone();
-                Storyboard.SetTargetProperty(scaleAnimY, new PropertyPath(ScaleTransform.ScaleYProperty));
-                sb.Children.Add(scaleAnimY);
-
-                // 位移动画（向中心收缩）
-                double targetLeft = centerX - btn.Width / 2;
-                double targetTop = centerY - btn.Height / 2;
-                var moveX = new DoubleAnimation(targetLeft, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(moveX, btn);
-                Storyboard.SetTargetProperty(moveX, new PropertyPath("(Canvas.Left)"));
-                sb.Children.Add(moveX);
-                var moveY = new DoubleAnimation(targetTop, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(moveY, btn);
-                Storyboard.SetTargetProperty(moveY, new PropertyPath("(Canvas.Top)"));
-                sb.Children.Add(moveY);
-
-                sb.Begin();
-            }
-
-            // MeidoImage 收缩淡出
-            if (MeidoImage != null)
-            {
-                var meidoScale = MeidoImage.RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
-                MeidoImage.RenderTransform = meidoScale;
-                var meidoSb = new Storyboard { Duration = TimeSpan.FromMilliseconds(durationMs) };
-
-                var meidoScaleAnim = new DoubleAnimation(0.0, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(meidoScaleAnim, meidoScale);
-                Storyboard.SetTargetProperty(meidoScaleAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
-                meidoSb.Children.Add(meidoScaleAnim);
-                var meidoScaleAnimY = meidoScaleAnim.Clone();
-                Storyboard.SetTargetProperty(meidoScaleAnimY, new PropertyPath(ScaleTransform.ScaleYProperty));
-                meidoSb.Children.Add(meidoScaleAnimY);
-
-                var opacityAnim = new DoubleAnimation(0.0, TimeSpan.FromMilliseconds(durationMs));
-                Storyboard.SetTarget(opacityAnim, MeidoImage);
-                Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(UIElement.OpacityProperty));
-                meidoSb.Children.Add(opacityAnim);
-
-                meidoSb.Begin();
-            }
-
-            // 使用 FillBehavior.Stop 使动画结束后不再冻结属性值
-            var shiftAnimX = new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs))
-            {
-                FillBehavior = FillBehavior.Stop
-            };
-            var shiftAnimY = new DoubleAnimation(0, TimeSpan.FromMilliseconds(durationMs))
-            {
-                FillBehavior = FillBehavior.Stop
-            };
-
-            _contentShift.BeginAnimation(TranslateTransform.XProperty, shiftAnimX);
-            _contentShift.BeginAnimation(TranslateTransform.YProperty, shiftAnimY);
-
-            // 等待动画完成后清除动画并重置位移
-            await Task.Delay(durationMs + 20);
-            _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
-            _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
-            _contentShift.X = 0;
-            _contentShift.Y = 0;
-
-            // 隐藏窗口
-            Hide();
-            _isClosingAnimationRunning = false;
-        }
-
-        #region 迷你聊天实现
-
-        /// 切换迷你聊天栏显隐
-        private void ToggleMiniChat()
-        {
-            if (_isMiniChatOpen)
-            {
-                HideMiniChat();
-            }
-            else
-            {
-                ShowMiniChat();
-            }
-        }
-
-        /// 创建并显示迷你聊天栏
-        private void ShowMiniChat()
-        {
-            // 展开迷你聊天时，重置窗口内容偏移
-            _contentShift.BeginAnimation(TranslateTransform.XProperty, null);
-            _contentShift.BeginAnimation(TranslateTransform.YProperty, null);
-            _contentShift.X = 0;
-            _contentShift.Y = 0;
-
-            if (_miniChatPopup == null)
-            {
-                _miniChatPopup = new Popup
-                {
-                    AllowsTransparency = true,
-                    PlacementTarget = MainCanvas,
-                    Placement = PlacementMode.Relative,
-                    StaysOpen = true
-                };
-            }
-
-            if (_miniChatContainer == null)
-            {
-                // 初始化 UI 组件
-                _miniChatContainer = new Border
-                {
-                    Background = Brushes.Transparent,
-                    BorderBrush = Brushes.Transparent,
-                    BorderThickness = new Thickness(0),
-                    CornerRadius = new CornerRadius(0),
-                    Effect = null
-                };
-
-                var root = new StackPanel { Margin = new Thickness(10) };
-                _miniChatPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
-                _miniChatInput = new TextBox
-                {
-                    MinWidth = 140,
-                    Height = 26,
-                    FontSize = 12,
-                    Padding = new Thickness(4),
-                    Style = Application.Current.TryFindResource("MiniChatTextBoxStyle") as Style
-                };
-                _miniChatInput.KeyDown += async (s, e) =>
-                {
-                    if (e.Key == Key.Enter && !Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
-                    {
-                        await MiniChatSend();
-                        e.Handled = true;
-                    }
-                };
-
-                root.Children.Add(_miniChatPanel);
-                root.Children.Add(_miniChatInput);
-                _miniChatContainer.Child = root;
-
-                // 大小变化时重新定位
-                _miniChatContainer.SizeChanged += (_, __) => PositionMiniChat();
-            }
-
-            // 将 Border 作为 Popup 的 Child
-            _miniChatPopup.Child = _miniChatContainer;
-
-            // 确保迷你聊天容器可见（可能在打开设置/聊天页面后被隐藏）
-            _miniChatContainer.Visibility = Visibility.Visible;
-
-            // 首次或重新打开时重新定位
-            PositionMiniChat();
-
-            _miniChatPopup.IsOpen = true;
-            _miniChatInput.Focus();
-            _miniChatInput.Clear();
-            _isMiniChatOpen = true;
-            _viewModel.IsMiniChatOpen = true;
-
-            SetMeidoImage(MeidoChattingImagePath);
-            PositionMeidoInCenter();
-
-            // 带动画效果重新排布按钮到左半圆
-            _radialMenu?.RegenerateWithAnimation(true);
-
-            // 初始化 ApiService
-            if (_miniApiService == null)
-            {
-                _miniSettings = AppSettings.Load();
-                if (_miniSettings.IsValid())
-                {
-                    _miniApiService = new ApiService(_miniSettings);
-
-                    // 异步初始化MCP服务
-                    if (_miniSettings.EnableMcp)
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await _miniApiService.InitializeMcpAsync();
-                                System.Diagnostics.Debug.WriteLine("迷你聊天MCP服务初始化完成");
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"迷你聊天MCP服务初始化失败: {ex.Message}");
-                            }
-                        });
-                    }
-                }
-            }
-        }
-
-        /// 隐藏并清理迷你聊天栏
-        private void HideMiniChat()
-        {
-            if (_miniChatPopup != null)
-            {
-                _miniChatPopup.IsOpen = false;
-            }
-
-            _isMiniChatOpen = false;
-            _viewModel.IsMiniChatOpen = false;
-            _miniChatRoundCount = 0;
-
-            // 清空迷你聊天历史与界面
-            _miniChatPanel?.Children.Clear();
-            _miniChatHistory.Clear();
-
-            SetMeidoImage(MeidoStandbyImagePath);
-
-            // 恢复圆形布局
-            _radialMenu?.RegenerateWithAnimation(false);
-        }
-
-        /// 根据妹抖酱位置计算聊天栏放置位置
-        private void PositionMiniChat()
-        {
-            if (MeidoImage == null || _miniChatContainer == null || _miniChatPopup == null) return;
-
-            // 获取妹抖酱在 Canvas 中的坐标
-            Point meidoPos = MeidoImage.TranslatePoint(new Point(0, 0), MainCanvas);
-
-            double chatLeft = meidoPos.X + MeidoImage.Width + 12;
-            double chatTop = meidoPos.Y + (MeidoImage.Height - _miniChatContainer.ActualHeight) / 2;
-
-            _miniChatPopup.HorizontalOffset = chatLeft;
-            _miniChatPopup.VerticalOffset = chatTop;
-        }
-
-        /// 发送迷你聊天消息
-        private async Task MiniChatSend()
-        {
-            string text = _miniChatInput?.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            // 显示用户气泡
-            AddMiniBubble(text, true);
-            _miniChatHistory.Add(new ChatMessage("user", text));
-
-            _miniChatInput.Clear();
-
-            if (_miniApiService == null)
-            {
-                MessageBox.Show("需要先配置API，才能与妹抖酱聊天哦~", "配置缺失", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            // 发送完整历史（含本次）
-            string reply = await _miniApiService.SendMessageAsync(new List<ChatMessage>(_miniChatHistory));
-
-            // 显示 AI 回复 ( /// 分句)
-            var sentences = SplitAiMessage(reply);
-            foreach (var s in sentences)
-            {
-                AddMiniBubble(s.Trim(), false);
-                _miniChatHistory.Add(new ChatMessage("assistant", s.Trim()));
-            }
-
-            _miniChatRoundCount++;
-
-            // 超过3轮转到窗口聊天
-            if (_miniChatRoundCount >= 3)
-            {
-                OpenAiChatWindow(new List<ChatMessage>(_miniChatHistory));
-                HideMiniChat();
-                _miniChatHistory.Clear();
-            }
-        }
-
-        /// 在迷你聊天面板添加气泡
-        private void AddMiniBubble(string msg, bool isUser)
-        {
-            if (_miniChatPanel == null) return;
-
-            // 检查是否为工具调用消息
-            if (!isUser && IsToolExecutionMessage(msg))
-            {
-                AddMiniToolCallBar(msg);
-                return;
-            }
-
-            var bubble = new Border
-            {
-                Background = isUser ? ((Brush)Application.Current.TryFindResource("MeidoThemeColor") ?? new SolidColorBrush(Color.FromRgb(0xE8, 0x74, 0x75)))
-                                   : new SolidColorBrush(Color.FromRgb(240, 240, 240)),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(6, 4, 6, 4),
-                Margin = new Thickness(isUser ? 40 : 0, 2, isUser ? 0 : 40, 2),
-                HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-                MaxWidth = 180
-            };
-
-            var txt = new TextBlock
-            {
-                Text = msg,
-                FontSize = 11,
-                Foreground = isUser ? Brushes.White : Brushes.Black,
-                TextWrapping = TextWrapping.Wrap
-            };
-
-            bubble.Child = txt;
-            _miniChatPanel.Children.Add(bubble);
-
-            // 保持最多7条气泡
-            if (_miniChatPanel.Children.Count > 7)
-            {
-                _miniChatPanel.Children.RemoveAt(0);
-            }
-        }
-
-        /// 检查消息是否包含工具执行相关内容（迷你聊天版本）
-        private bool IsToolExecutionMessage(string message)
-        {
-            return message.Contains("TOOL_CALL_START:") ||
-                   message.Contains("TOOL_PARAMS:") ||
-                   message.Contains("TOOL_RESULT_SUCCESS:") ||
-                   message.Contains("TOOL_RESULT_FAILED:") ||
-                   message.Contains("TOOL_CALL_END");
-        }
-
-        /// 在迷你聊天中添加工具调用信息条
-        private void AddMiniToolCallBar(string message)
-        {
-            var toolCallData = ParseMiniToolCallMessage(message);
-            if (toolCallData == null) return;
-
-            // 创建居中的简略信息条
-            var containerBorder = new Border
-            {
-                Background = Brushes.Transparent,
-                Margin = new Thickness(0, 4, 0, 4),
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-
-            var messageBorder = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(220, 220, 220)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(8, 4, 8, 4),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                MaxWidth = 160
-            };
-
-            var textBlock = new TextBlock
-            {
-                Text = $"🤖 妹抖酱调用了 {toolCallData.ToolName} 工具",
-                FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(102, 102, 102)),
-                TextAlignment = TextAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                TextWrapping = TextWrapping.Wrap
-            };
-
-            messageBorder.Child = textBlock;
-            containerBorder.Child = messageBorder;
-            _miniChatPanel.Children.Add(containerBorder);
-
-            // 保持最多7条气泡
-            if (_miniChatPanel.Children.Count > 7)
-            {
-                _miniChatPanel.Children.RemoveAt(0);
-            }
-        }
-
-        /// 解析工具调用消息（迷你聊天版本）
-        private MiniToolCallData ParseMiniToolCallMessage(string message)
-        {
-            var lines = message.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            var toolCallData = new MiniToolCallData();
-            
-            foreach (var line in lines)
-            {
-                var trimmedLine = line.Trim();
-                if (trimmedLine.StartsWith("TOOL_CALL_START:"))
-                {
-                    toolCallData.ToolName = trimmedLine.Substring("TOOL_CALL_START:".Length).Trim();
-                    break; // 迷你聊天只需要工具名称
-                }
-            }
-            
-            return string.IsNullOrEmpty(toolCallData.ToolName) ? null : toolCallData;
-        }
-
-        /// 迷你工具调用数据类
-        private class MiniToolCallData
-        {
-            public string ToolName { get; set; } = "";
-        }
-
-        private List<string> SplitAiMessage(string message)
-        {
-            return message.Split(new string[] { @"\\\" }, StringSplitOptions.RemoveEmptyEntries).ToList();
-        }
-
-        #endregion
 
         #region MCP状态监控
 
         /// 初始化MCP状态监控
         private void InitializeMcpStatusMonitoring()
         {
-            try
-            {
-                // 加载设置并初始化MCP服务
-                var settings = AppSettings.Load();
-                if (settings.EnableMcp)
-                {
-                    _mcpService = new McpService(settings);
-
-                    // 异步初始化MCP服务
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _mcpService.InitializeAsync();
-
-                            // 在UI线程上更新状态
-                            Dispatcher.Invoke(() =>
-                            {
-                                UpdateMcpStatusDisplay();
-                                McpStatusIndicator.Visibility = Visibility.Visible;
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"MCP服务初始化失败: {ex.Message}");
-                        }
-                    });
-
-                    // 启动状态更新定时器
-                    _mcpStatusTimer = new System.Windows.Threading.DispatcherTimer
-                    {
-                        Interval = TimeSpan.FromSeconds(10)
-                    };
-                    _mcpStatusTimer.Tick += (sender, e) => UpdateMcpStatusDisplay();
-                    _mcpStatusTimer.Start();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"初始化MCP状态监控失败: {ex.Message}");
-            }
+            _ = _mcpStatusCoordinator.StartAsync();
         }
 
-        /// 更新MCP状态显示
-        private async void UpdateMcpStatusDisplay()
+        /// 清理迷你聊天API资源
+        private void CleanupMiniChatResources()
         {
             try
             {
-                if (_mcpService == null)
-                {
-                    _viewModel.McpStatusText = "MCP: 0/0";
-                    McpStatusIndicator.Visibility = Visibility.Collapsed;
-                    return;
-                }
-
-                var serverStatuses = await _mcpService.GetServerStatusAsync();
-                var connectedCount = serverStatuses.Count(s => s.IsConnected);
-                var totalCount = serverStatuses.Count;
-                var totalTools = serverStatuses.Where(s => s.IsConnected).Sum(s => s.ToolCount);
-
-                // 更新状态文本
-                _viewModel.McpStatusText = $"MCP: {connectedCount}/{totalCount} ({totalTools}工具)";
-
-                // 更新状态指示器颜色
-                if (connectedCount == 0)
-                {
-                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xD6, 0x58, 0x59)); // 主题色深色
-                    McpStatusIndicator.ToolTip = "MCP: 无连接";
-                }
-                else if (connectedCount == totalCount)
-                {
-                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xE8, 0x74, 0x75)); // 主题色
-                    McpStatusIndicator.ToolTip = $"MCP: 全部连接 ({totalTools} 个工具可用)";
-                }
-                else
-                {
-                    McpStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xF0, 0xA0, 0xA1)); // 主题色浅色
-                    McpStatusIndicator.ToolTip = $"MCP: 部分连接 ({connectedCount}/{totalCount} 服务器, {totalTools} 个工具)";
-                }
-
-                // 显示状态指示器
-                McpStatusIndicator.Visibility = Visibility.Visible;
+                _viewModel.MiniChat.EscalationRequested -= MiniChat_EscalationRequested;
+                _viewModel.MiniChat.Dispose();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"更新MCP状态显示失败: {ex.Message}");
-                _viewModel.McpStatusText = "MCP: 0/0";
-                McpStatusIndicator.Visibility = Visibility.Collapsed;
+                System.Diagnostics.Debug.WriteLine($"清理迷你聊天API资源失败: {ex.Message}");
             }
         }
 
         /// 清理MCP资源
         private void CleanupMcpResources()
         {
-            try
-            {
-                _mcpStatusTimer?.Stop();
-                _mcpStatusTimer = null;
-
-                _mcpService?.Dispose();
-                _mcpService = null;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"清理MCP资源失败: {ex.Message}");
-            }
+            _mcpStatusCoordinator.Dispose();
         }
 
         #endregion

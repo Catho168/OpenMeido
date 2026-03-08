@@ -1,0 +1,81 @@
+<UserControl x:Class="OpenMeido.Controls.ChatTitleBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Border x:Name="TitleBarBorder"
+            CornerRadius="17,17,0,0"
+            MouseLeftButtonDown="TitleBarBorder_MouseLeftButtonDown"
+            UseLayoutRounding="True"
+            SnapsToDevicePixels="True">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#E87475" Offset="0"/>
+                <GradientStop Color="#D65859" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="16,0,0,0">
+                <Border Width="28"
+                        Height="28"
+                        Margin="0,0,10,0"
+                        Background="#26FFFFFF"
+                        CornerRadius="14">
+                    <TextBlock Text="💬"
+                               FontSize="14"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="妹抖酱"
+                               FontSize="15"
+                               FontWeight="Bold"
+                               Foreground="White"/>
+                    <TextBlock Text="更轻盈的对话工作台"
+                               FontSize="10"
+                               Foreground="#EAF3FF"
+                               Opacity="0.92"/>
+                </StackPanel>
+                <Border Margin="12,0,0,0"
+                        Padding="8,3"
+                        Background="#2EFFFFFF"
+                        CornerRadius="12"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusTextBlockElement"
+                               Text="{Binding StatusText}"
+                               FontSize="11"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Opacity="0.9"/>
+                </Border>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    x:Name="MinimizeButton"
+                    Style="{StaticResource ChatTitleBarButtonStyle}"
+                    Foreground="White"
+                    Click="MinimizeButton_Click"
+                    ToolTip="最小化">
+                <TextBlock Text="&#xE921;" FontFamily="Segoe MDL2 Assets" />
+            </Button>
+
+            <Button Grid.Column="2"
+                    x:Name="CloseButton"
+                    Style="{StaticResource ChatCloseButtonStyle}"
+                    Foreground="White"
+                    Click="CloseButton_Click"
+                    ToolTip="关闭">
+                <TextBlock Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" />
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

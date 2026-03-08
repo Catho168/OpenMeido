@@ -1,0 +1,59 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="ThemePrimaryColor">#E87475</Color>
+    <Color x:Key="ThemePrimaryLightColor">#F0A0A1</Color>
+    <Color x:Key="ThemePrimaryDarkColor">#D65859</Color>
+    <Color x:Key="ThemeRoseMutedColor">#E8C4C5</Color>
+    <Color x:Key="ThemeSurfaceColor">#FFFDFD</Color>
+    <Color x:Key="ThemeSurfaceSoftColor">#FFF7F7</Color>
+    <Color x:Key="ThemeSurfaceAltColor">#FFF2F3</Color>
+    <Color x:Key="ThemeBorderColor">#E7D8DC</Color>
+    <Color x:Key="ThemeBorderStrongColor">#D9B7BC</Color>
+    <Color x:Key="ThemeTextPrimaryColor">#3A2E34</Color>
+    <Color x:Key="ThemeTextSecondaryColor">#7A6770</Color>
+    <Color x:Key="ThemeTextMutedColor">#9B8790</Color>
+    <Color x:Key="ThemeSuccessColor">#4A8F6C</Color>
+    <Color x:Key="ThemeWarningColor">#D99852</Color>
+    <Color x:Key="ThemeInfoColor">#6A8BC6</Color>
+
+    <SolidColorBrush x:Key="ThemePrimaryBrush" Color="{StaticResource ThemePrimaryColor}"/>
+    <SolidColorBrush x:Key="ThemePrimaryLightBrush" Color="{StaticResource ThemePrimaryLightColor}"/>
+    <SolidColorBrush x:Key="ThemePrimaryDarkBrush" Color="{StaticResource ThemePrimaryDarkColor}"/>
+    <SolidColorBrush x:Key="ThemeRoseMutedBrush" Color="{StaticResource ThemeRoseMutedColor}"/>
+    <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="{StaticResource ThemeSurfaceColor}"/>
+    <SolidColorBrush x:Key="ThemeSurfaceSoftBrush" Color="{StaticResource ThemeSurfaceSoftColor}"/>
+    <SolidColorBrush x:Key="ThemeSurfaceAltBrush" Color="{StaticResource ThemeSurfaceAltColor}"/>
+    <SolidColorBrush x:Key="ThemeBorderBrush" Color="{StaticResource ThemeBorderColor}"/>
+    <SolidColorBrush x:Key="ThemeBorderStrongBrush" Color="{StaticResource ThemeBorderStrongColor}"/>
+    <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="{StaticResource ThemeTextPrimaryColor}"/>
+    <SolidColorBrush x:Key="ThemeTextSecondaryBrush" Color="{StaticResource ThemeTextSecondaryColor}"/>
+    <SolidColorBrush x:Key="ThemeTextMutedBrush" Color="{StaticResource ThemeTextMutedColor}"/>
+    <SolidColorBrush x:Key="ThemeSuccessBrush" Color="{StaticResource ThemeSuccessColor}"/>
+    <SolidColorBrush x:Key="ThemeWarningBrush" Color="{StaticResource ThemeWarningColor}"/>
+    <SolidColorBrush x:Key="ThemeInfoBrush" Color="{StaticResource ThemeInfoColor}"/>
+
+    <CornerRadius x:Key="ThemeRadiusSmall">4</CornerRadius>
+    <CornerRadius x:Key="ThemeRadiusMedium">8</CornerRadius>
+    <CornerRadius x:Key="ThemeRadiusLarge">12</CornerRadius>
+    <CornerRadius x:Key="ThemeRadiusXLarge">16</CornerRadius>
+
+    <Thickness x:Key="ThemePaddingSmall">8</Thickness>
+    <Thickness x:Key="ThemePaddingMedium">12</Thickness>
+    <Thickness x:Key="ThemePaddingLarge">16</Thickness>
+
+    <DropShadowEffect x:Key="ThemeShadowSmall"
+                      Color="#22000000"
+                      BlurRadius="10"
+                      ShadowDepth="2"
+                      Opacity="0.18"/>
+    <DropShadowEffect x:Key="ThemeShadowMedium"
+                      Color="#33000000"
+                      BlurRadius="18"
+                      ShadowDepth="4"
+                      Opacity="0.22"/>
+    <DropShadowEffect x:Key="ThemeShadowLarge"
+                      Color="#40000000"
+                      BlurRadius="28"
+                      ShadowDepth="6"
+                      Opacity="0.26"/>
+</ResourceDictionary>

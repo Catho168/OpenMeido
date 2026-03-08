@@ -7,12 +7,13 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol.Transport;
 using OpenMeido.Models;
+using OpenMeido.Services.Interfaces;
 using McpServerConfig = OpenMeido.Models.McpServerConfig;
 
 namespace OpenMeido.Services
 {
     /// MCP服务管理类，负责管理MCP客户端连接和工具调用
-    public class McpService : IDisposable
+    public class McpService : IMcpService
     {
         // MCP客户端字典，键为服务器ID
         private readonly Dictionary<string, IMcpClient> mcpClients;

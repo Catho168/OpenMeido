@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,9 +22,6 @@ namespace OpenMeido
         /// 用户点击按钮时回调外部方法，以便执行命令并隐藏窗口等。
         public Action<ICommand> OnMenuCommand { get; set; }
 
-        // 动画相关字段
-        private Dictionary<Button, Point> _buttonPositions = new Dictionary<Button, Point>();
-
         public RadialMenuControl()
         {
             InitializeComponent();
@@ -34,6 +32,22 @@ namespace OpenMeido
 
             // 随着大小变化重新布局
             SizeChanged += new SizeChangedEventHandler((sender, e) => Regenerate());
+        }
+
+        /// 根据宿主窗口尺寸刷新菜单布局。
+        public void RefreshLayout(double hostWidth, double hostHeight, bool isMiniChatOpen)
+        {
+            if (hostWidth <= 0 || hostHeight <= 0)
+            {
+                return;
+            }
+
+            Width = hostWidth;
+            Height = hostHeight;
+            RootCanvas.Width = hostWidth;
+            RootCanvas.Height = hostHeight;
+            IsMiniChatOpen = isMiniChatOpen;
+            Regenerate();
         }
 
         // 初始化时只创建一次按钮
@@ -54,21 +68,15 @@ namespace OpenMeido
         public void Regenerate()
         {
             EnsureButtons();
-            if (MenuItems == null || MenuItems.Count == 0) return;
+            if (MenuItems == null || MenuItems.Count == 0 || GetRenderableWidth() <= 0 || GetRenderableHeight() <= 0) return;
 
-            double radius = Math.Min(ActualWidth, ActualHeight) * 0.3;
-            double startAngle = 0;
-            double angleRange = 2 * Math.PI;
-            if (IsMiniChatOpen)
-            {
-                startAngle = Math.PI / 2;  // 90°
-                angleRange = Math.PI;      // 半圆
-            }
+            var (radius, startAngle, angleRange) = GetLayoutParameters(IsMiniChatOpen);
 
             for (int i = 0; i < MenuItems.Count; i++)
             {
                 var pos = CalculateButtonPosition(i, MenuItems.Count, radius, startAngle, angleRange);
                 var button = RootCanvas.Children[i] as Button;
+                ResetButtonLayoutState(button);
                 Canvas.SetLeft(button, pos.X - button.Width / 2);
                 Canvas.SetTop(button, pos.Y - button.Height / 2);
             }
@@ -78,21 +86,15 @@ namespace OpenMeido
         public void RegenerateWithAnimation(bool isMiniChatOpen)
         {
             EnsureButtons();
-            if (MenuItems == null || MenuItems.Count == 0) return;
+            if (MenuItems == null || MenuItems.Count == 0 || GetRenderableWidth() <= 0 || GetRenderableHeight() <= 0) return;
 
-            double radius = Math.Min(ActualWidth, ActualHeight) * 0.3;
-            double startAngle = 0;
-            double angleRange = 2 * Math.PI;
-            if (isMiniChatOpen)
-            {
-                startAngle = Math.PI / 2;  // 90°
-                angleRange = Math.PI;      // 半圆
-            }
+            var (radius, startAngle, angleRange) = GetLayoutParameters(isMiniChatOpen);
 
             var storyboard = new Storyboard();
             for (int i = 0; i < MenuItems.Count; i++)
             {
                 var button = RootCanvas.Children[i] as Button;
+                ResetButtonLayoutState(button);
                 var targetPos = CalculateButtonPosition(i, MenuItems.Count, radius, startAngle, angleRange);
                 double fromLeft = Canvas.GetLeft(button);
                 double fromTop = Canvas.GetTop(button);
@@ -127,6 +129,66 @@ namespace OpenMeido
             storyboard.Begin();
         }
 
+        /// 批量更新按钮可见性，避免宿主窗口直接管理内部按钮集合。
+        public void SetButtonsVisibility(Visibility visibility)
+        {
+            EnsureButtons();
+            foreach (Button btn in RootCanvas.Children.OfType<Button>())
+            {
+                btn.Visibility = visibility;
+            }
+        }
+
+        /// 播放按钮向中心收拢的关闭动画。
+        public Task PlayCloseAnimationAsync(TimeSpan duration)
+        {
+            EnsureButtons();
+            if (MenuItems == null || MenuItems.Count == 0 || GetRenderableWidth() <= 0 || GetRenderableHeight() <= 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            double centerX = GetRenderableWidth() / 2;
+            double centerY = GetRenderableHeight() / 2;
+
+            foreach (Button btn in RootCanvas.Children.OfType<Button>())
+            {
+                var (scale, rotate) = EnsureCloseAnimationTransforms(btn);
+                Storyboard sb = new Storyboard { Duration = duration };
+
+                var rotateAnim = new DoubleAnimation(360, duration);
+                Storyboard.SetTarget(rotateAnim, rotate);
+                Storyboard.SetTargetProperty(rotateAnim, new PropertyPath(RotateTransform.AngleProperty));
+                sb.Children.Add(rotateAnim);
+
+                var scaleAnim = new DoubleAnimation(0.0, duration);
+                Storyboard.SetTarget(scaleAnim, scale);
+                Storyboard.SetTargetProperty(scaleAnim, new PropertyPath(ScaleTransform.ScaleXProperty));
+                sb.Children.Add(scaleAnim);
+
+                var scaleAnimY = scaleAnim.Clone();
+                Storyboard.SetTargetProperty(scaleAnimY, new PropertyPath(ScaleTransform.ScaleYProperty));
+                sb.Children.Add(scaleAnimY);
+
+                double targetLeft = centerX - btn.Width / 2;
+                double targetTop = centerY - btn.Height / 2;
+
+                var moveX = new DoubleAnimation(targetLeft, duration);
+                Storyboard.SetTarget(moveX, btn);
+                Storyboard.SetTargetProperty(moveX, new PropertyPath("(Canvas.Left)"));
+                sb.Children.Add(moveX);
+
+                var moveY = new DoubleAnimation(targetTop, duration);
+                Storyboard.SetTarget(moveY, btn);
+                Storyboard.SetTargetProperty(moveY, new PropertyPath("(Canvas.Top)"));
+                sb.Children.Add(moveY);
+
+                sb.Begin();
+            }
+
+            return Task.Delay(duration + TimeSpan.FromMilliseconds(20));
+        }
+
         /// 根据对外传入的鼠标位置更新按钮缩放。
         public void UpdateButtonScales(Point mousePos)
         {
@@ -137,6 +199,18 @@ namespace OpenMeido
         }
 
         #region 内部辅助
+
+        private (double Radius, double StartAngle, double AngleRange) GetLayoutParameters(bool isMiniChatOpen)
+        {
+            double radius = Math.Min(GetRenderableWidth(), GetRenderableHeight()) * 0.3;
+            double startAngle = isMiniChatOpen ? Math.PI / 2 : 0;
+            double angleRange = isMiniChatOpen ? Math.PI : 2 * Math.PI;
+            return (radius, startAngle, angleRange);
+        }
+
+        private double GetRenderableWidth() => ActualWidth > 0 ? ActualWidth : Width;
+
+        private double GetRenderableHeight() => ActualHeight > 0 ? ActualHeight : Height;
 
         private Point CalculateButtonPosition(int index, int total, double radius, double startAngle = 0, double angleRange = 2 * Math.PI)
         {
@@ -157,12 +231,64 @@ namespace OpenMeido
                 }
             }
 
-            double centerX = ActualWidth / 2;
-            double centerY = ActualHeight / 2;
+            double centerX = GetRenderableWidth() / 2;
+            double centerY = GetRenderableHeight() / 2;
 
             return new Point(
                 centerX + radius * Math.Cos(angle),
                 centerY + radius * Math.Sin(angle));
+        }
+
+        private (ScaleTransform Scale, RotateTransform Rotate) EnsureCloseAnimationTransforms(Button button)
+        {
+            TransformGroup group = button.RenderTransform as TransformGroup;
+            ScaleTransform scale;
+
+            if (group == null)
+            {
+                group = new TransformGroup();
+                if (button.RenderTransform is ScaleTransform existingScale)
+                {
+                    scale = existingScale;
+                }
+                else
+                {
+                    scale = new ScaleTransform(1, 1);
+                }
+
+                group.Children.Add(scale);
+                group.Children.Add(new RotateTransform(0));
+                button.RenderTransform = group;
+                button.RenderTransformOrigin = new Point(0.5, 0.5);
+            }
+            else
+            {
+                scale = group.Children.OfType<ScaleTransform>().FirstOrDefault() ?? new ScaleTransform(1, 1);
+                if (!group.Children.Contains(scale))
+                {
+                    group.Children.Insert(0, scale);
+                }
+
+                if (!group.Children.OfType<RotateTransform>().Any())
+                {
+                    group.Children.Add(new RotateTransform(0));
+                }
+            }
+
+            return (scale, group.Children.OfType<RotateTransform>().First());
+        }
+
+        private static void ResetButtonLayoutState(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.BeginAnimation(Canvas.LeftProperty, null);
+            button.BeginAnimation(Canvas.TopProperty, null);
+            button.RenderTransform = new ScaleTransform(1, 1);
+            button.RenderTransformOrigin = new Point(0.5, 0.5);
         }
 
         private Button CreateRadialButton(RadialMenuItem item)
@@ -213,7 +339,7 @@ namespace OpenMeido
         }
         #endregion
 
-        /// 提供按钮枚举供外部使用（例如旧的缩放逻辑）。
+        /// 提供按钮枚举供外部观察/测试使用。
         public IEnumerable<Button> RadialButtons 
         { 
             get { return RootCanvas.Children.OfType<Button>(); } 

@@ -1,0 +1,145 @@
+<UserControl x:Class="OpenMeido.Controls.ChatInputPanelControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <UserControl.Resources>
+        <Style x:Key="InputTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#3A2E34"/>
+            <Setter Property="Background" Value="#FFFCFC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E7D8DC"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource MeidoThemeColorLight}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource MeidoThemeColor}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="InputBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="InputBorder" Property="BorderBrush" Value="#D9B7BC"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="InputBorder" Property="BorderBrush" Value="{StaticResource MeidoThemeColor}"/>
+                                <Setter TargetName="InputBorder" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.65"/>
+                                <Setter TargetName="InputBorder" Property="Background" Value="#FFF5F5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SendButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="96"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Background" Value="{StaticResource MeidoThemeColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="SendButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SendButtonBorder" Property="Background" Value="{StaticResource MeidoThemeColorLight}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="SendButtonBorder" Property="Background" Value="{StaticResource MeidoThemeColorDark}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="SendButtonBorder" Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="#FFF9F9"
+            BorderBrush="#F1E1E4"
+            BorderThickness="0,1,0,0"
+            CornerRadius="0,0,18,18">
+        <Grid Margin="16,14,16,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                <TextBlock Text="继续和妹抖酱对话"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="#5B4952"/>
+                <TextBlock Text="支持多行输入，按 Ctrl+Enter 可快速发送"
+                           FontSize="10"
+                           Foreground="#927E87"
+                           Margin="0,3,0,0"/>
+            </StackPanel>
+
+            <Grid Grid.Row="1">
+                <TextBox x:Name="InputTextBoxElement"
+                         Style="{StaticResource InputTextBoxStyle}"
+                         MaxHeight="110"
+                         Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsInputEnabled}"
+                         KeyDown="InputTextBoxElement_KeyDown"
+                         TextChanged="InputTextBoxElement_TextChanged"/>
+                <TextBlock x:Name="PlaceholderTextBlockElement"
+                           Text="想和妹抖酱聊什么呢~"
+                           Foreground="#A28F97"
+                           FontSize="12"
+                           Margin="16,14,12,8"
+                           IsHitTestVisible="False"
+                           VerticalAlignment="Top"
+                           FontFamily="{StaticResource GlobalFontFamily}"/>
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="按 Ctrl+Enter 发送消息"
+                           FontSize="10"
+                           Foreground="#8F7C85"
+                           VerticalAlignment="Center"/>
+
+                <Button x:Name="SendButton"
+                        Grid.Column="1"
+                        Content="发送"
+                        Style="{StaticResource SendButtonStyle}"
+                        IsEnabled="{Binding CanSend}"
+                        Click="SendButton_Click"
+                        IsDefault="True"/>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

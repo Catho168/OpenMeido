@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using OpenMeido.Helpers;
 using OpenMeido.Models;
 using OpenMeido.Services;
 using OpenMeido.Services.Interfaces;
@@ -14,7 +16,7 @@ namespace OpenMeido.ViewModels
         private readonly IChatService _chatService;
         private readonly IChatHistoryService _chatHistoryService;
         private string _statusText = "待命";
-        private string _statusType = "ready";
+        private string _statusType = ChatStatusTypes.Ready;
         private string _inputText = string.Empty;
         private bool _isBusy;
         private string _currentSessionTitle = DefaultSessionTitle;
@@ -23,6 +25,7 @@ namespace OpenMeido.ViewModels
         {
             _chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
             _chatHistoryService = chatHistoryService ?? throw new ArgumentNullException(nameof(chatHistoryService));
+            DisplayMessages = new ObservableCollection<ChatMessageDisplayItemViewModel>();
             UpdateCurrentSessionTitle(_chatHistoryService.CurrentSession);
         }
 
@@ -75,7 +78,7 @@ namespace OpenMeido.ViewModels
             private set => SetProperty(ref _currentSessionTitle, value);
         }
 
-        public ApiService CurrentApiService => _chatService.CurrentApiService;
+        public IApiService CurrentApiService => _chatService.CurrentApiService;
 
         public ChatSession CurrentSession => _chatHistoryService.CurrentSession;
 
@@ -83,15 +86,17 @@ namespace OpenMeido.ViewModels
 
         public IReadOnlyList<ChatMessage> CurrentMessages => _chatHistoryService.CurrentMessages;
 
+        public ObservableCollection<ChatMessageDisplayItemViewModel> DisplayMessages { get; }
+
         public async Task InitializeAsync()
         {
-            SetStatus("初始化聊天服务...", "processing");
+            SetStatus("初始化聊天服务...", ChatStatusTypes.Processing);
             ApplyInitializationResult(await _chatService.InitializeAsync());
         }
 
         public async Task ReinitializeAsync()
         {
-            SetStatus("重新加载聊天配置...", "processing");
+            SetStatus("重新加载聊天配置...", ChatStatusTypes.Processing);
             ApplyInitializationResult(await _chatService.ReinitializeAsync());
         }
 
@@ -110,7 +115,7 @@ namespace OpenMeido.ViewModels
 
             IsBusy = true;
             InputText = string.Empty;
-            SetStatus("妹抖酱思考ing...", "processing");
+            SetStatus("妹抖酱思考ing...", ChatStatusTypes.Processing);
         }
 
         public void StartNewSession()
@@ -145,23 +150,23 @@ namespace OpenMeido.ViewModels
 
         public async Task<string> SendMessageAsync(List<ChatMessage> messagesHistory)
         {
-            SetStatus("正在发送请求...", "processing");
+            SetStatus("正在发送请求...", ChatStatusTypes.Processing);
             return await _chatService.SendMessageAsync(messagesHistory);
         }
 
         public void MarkReady()
         {
-            SetStatus("就绪", "ready");
+            SetStatus("就绪", ChatStatusTypes.Ready);
         }
 
         public void MarkRequestFailed()
         {
-            SetStatus("请求失败", "error");
+            SetStatus("请求失败", ChatStatusTypes.Error);
         }
 
         public void MarkSendFailed()
         {
-            SetStatus("发送失败", "error");
+            SetStatus("发送失败", ChatStatusTypes.Error);
         }
 
         public void CompleteSend()

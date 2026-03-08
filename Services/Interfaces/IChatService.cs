@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using OpenMeido.Helpers;
 using OpenMeido.Models;
-using OpenMeido.Services;
 
 namespace OpenMeido.Services.Interfaces
 {
@@ -18,16 +18,16 @@ namespace OpenMeido.Services.Interfaces
 
         public string StatusType { get; }
 
-        public static ChatServiceInitializationResult Ready(string statusText = "就绪") => new ChatServiceInitializationResult(statusText, "ready");
+        public static ChatServiceInitializationResult Ready(string statusText = "就绪") => new ChatServiceInitializationResult(statusText, ChatStatusTypes.Ready);
 
-        public static ChatServiceInitializationResult Warning(string statusText) => new ChatServiceInitializationResult(statusText, "warning");
+        public static ChatServiceInitializationResult Warning(string statusText) => new ChatServiceInitializationResult(statusText, ChatStatusTypes.Warning);
 
-        public static ChatServiceInitializationResult Error(string statusText) => new ChatServiceInitializationResult(statusText, "error");
+        public static ChatServiceInitializationResult Error(string statusText) => new ChatServiceInitializationResult(statusText, ChatStatusTypes.Error);
     }
 
     public interface IChatService : IDisposable
     {
-        ApiService CurrentApiService { get; }
+        IApiService CurrentApiService { get; }
 
         Task<ChatServiceInitializationResult> InitializeAsync();
 

@@ -7,6 +7,13 @@ namespace OpenMeido.Services
 {
     public class SettingsService : ISettingsService
     {
+        private readonly IApiServiceFactory _apiServiceFactory;
+
+        public SettingsService(IApiServiceFactory apiServiceFactory)
+        {
+            _apiServiceFactory = apiServiceFactory ?? throw new ArgumentNullException(nameof(apiServiceFactory));
+        }
+
         public AppSettings Load()
         {
             return AppSettings.Load();
@@ -29,7 +36,7 @@ namespace OpenMeido.Services
                 throw new ArgumentNullException(nameof(settings));
             }
 
-            using var apiService = new ApiService(settings);
+            using var apiService = _apiServiceFactory.Create(settings);
             return await apiService.TestConnectionAsync();
         }
     }

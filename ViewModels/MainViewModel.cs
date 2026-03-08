@@ -1,6 +1,10 @@
 using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Media;
+using OpenMeido.Infrastructure;
 using OpenMeido.Models;
 using OpenMeido.Services;
+using OpenMeido.Services.Interfaces;
 using OpenMeido.ViewModels.Base;
 
 namespace OpenMeido.ViewModels
@@ -10,10 +14,19 @@ namespace OpenMeido.ViewModels
         private string _windowTitle = "OpenMeido";
         private bool _isMiniChatOpen;
         private string _mcpStatusText = "MCP: 0/0";
+        private string _mcpStatusToolTip = "MCP服务器状态";
+        private Visibility _mcpStatusVisibility = Visibility.Collapsed;
+        private Brush _mcpStatusDotBrush = Brushes.Gray;
 
         public MainViewModel()
+            : this(UiDependencyResolver.ResolveSettingsService(), UiDependencyResolver.ResolveApiServiceFactory())
+        {
+        }
+
+        public MainViewModel(ISettingsService settingsService, IApiServiceFactory apiServiceFactory)
         {
             MenuItems = CreateDefaultMenuItems();
+            MiniChat = new MiniChatViewModel(settingsService, apiServiceFactory);
         }
 
         public string WindowTitle
@@ -33,6 +46,26 @@ namespace OpenMeido.ViewModels
             get => _mcpStatusText;
             set => SetProperty(ref _mcpStatusText, value);
         }
+
+        public string McpStatusToolTip
+        {
+            get => _mcpStatusToolTip;
+            set => SetProperty(ref _mcpStatusToolTip, value);
+        }
+
+        public Visibility McpStatusVisibility
+        {
+            get => _mcpStatusVisibility;
+            set => SetProperty(ref _mcpStatusVisibility, value);
+        }
+
+        public Brush McpStatusDotBrush
+        {
+            get => _mcpStatusDotBrush;
+            set => SetProperty(ref _mcpStatusDotBrush, value);
+        }
+
+        public MiniChatViewModel MiniChat { get; }
 
         public IReadOnlyList<RadialMenuItem> MenuItems { get; }
 

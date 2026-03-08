@@ -12,11 +12,6 @@ namespace OpenMeido.Helpers
 
     internal static class ToolCallMessageParser
     {
-        private const string ToolCallStartPrefix = "TOOL_CALL_START:";
-        private const string ToolParamsPrefix = "TOOL_PARAMS:";
-        private const string ToolResultSuccessPrefix = "TOOL_RESULT_SUCCESS:";
-        private const string ToolResultFailedPrefix = "TOOL_RESULT_FAILED:";
-
         public static ToolCallMessageData Parse(string message)
         {
             if (string.IsNullOrWhiteSpace(message))
@@ -32,22 +27,22 @@ namespace OpenMeido.Helpers
             foreach (var line in message.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 var trimmedLine = line.Trim();
-                if (trimmedLine.StartsWith(ToolCallStartPrefix))
+                if (trimmedLine.StartsWith(ToolCallMessageMarkers.ToolCallStart))
                 {
-                    toolName = trimmedLine.Substring(ToolCallStartPrefix.Length).Trim();
+                    toolName = trimmedLine.Substring(ToolCallMessageMarkers.ToolCallStart.Length).Trim();
                 }
-                else if (trimmedLine.StartsWith(ToolParamsPrefix))
+                else if (trimmedLine.StartsWith(ToolCallMessageMarkers.ToolParams))
                 {
-                    parameters = trimmedLine.Substring(ToolParamsPrefix.Length).Trim();
+                    parameters = trimmedLine.Substring(ToolCallMessageMarkers.ToolParams.Length).Trim();
                 }
-                else if (trimmedLine.StartsWith(ToolResultSuccessPrefix))
+                else if (trimmedLine.StartsWith(ToolCallMessageMarkers.ToolResultSuccess))
                 {
-                    result = trimmedLine.Substring(ToolResultSuccessPrefix.Length).Trim();
+                    result = trimmedLine.Substring(ToolCallMessageMarkers.ToolResultSuccess.Length).Trim();
                     isSuccess = true;
                 }
-                else if (trimmedLine.StartsWith(ToolResultFailedPrefix))
+                else if (trimmedLine.StartsWith(ToolCallMessageMarkers.ToolResultFailed))
                 {
-                    result = trimmedLine.Substring(ToolResultFailedPrefix.Length).Trim();
+                    result = trimmedLine.Substring(ToolCallMessageMarkers.ToolResultFailed.Length).Trim();
                     isSuccess = false;
                 }
             }

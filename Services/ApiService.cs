@@ -12,13 +12,15 @@ using System.ClientModel;
 using ModelContextProtocol.Client;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol.Transport;
+using OpenMeido.Helpers;
 using OpenMeido.Models;
+using OpenMeido.Services.Interfaces;
 using ChatMessage = OpenMeido.Models.ChatMessage;
 
 namespace OpenMeido.Services
 {
     /// AI API服务类，负责与OpenAI格式的API进行通信，支持MCP工具集成
-    public class ApiService : IDisposable
+    public class ApiService : IApiService
     {
         // HTTP客户端实例，用于发送API请求
         private readonly HttpClient httpClient;
@@ -30,16 +32,21 @@ namespace OpenMeido.Services
         private IChatClient chatClient;
 
         // MCP服务实例
-        private McpService mcpService;
+        private readonly IMcpService mcpService;
 
         // MCP活动日志记录器
-        private McpActivityLogger mcpActivityLogger;
+        private readonly McpActivityLogger mcpActivityLogger;
 
 
 
         /// 构造函数，初始化API服务
         /// <param name="settings">应用程序设置对象</param>
         public ApiService(AppSettings settings)
+            : this(settings, new McpServiceFactory())
+        {
+        }
+
+        public ApiService(AppSettings settings, IMcpServiceFactory mcpServiceFactory)
         {
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
@@ -61,7 +68,7 @@ namespace OpenMeido.Services
             mcpActivityLogger = new McpActivityLogger();
 
             // 初始化MCP服务
-            mcpService = new McpService(settings, mcpActivityLogger);
+            mcpService = (mcpServiceFactory ?? new McpServiceFactory()).Create(settings, mcpActivityLogger);
 
 
 
@@ -243,24 +250,24 @@ namespace OpenMeido.Services
                             
                         // 构建简略的工具调用信息，包含详细数据用于展开显示
                         var toolCallInfo = new StringBuilder();
-                        toolCallInfo.AppendLine($"TOOL_CALL_START:{toolCall.Name}");
+                        toolCallInfo.AppendLine($"{ToolCallMessageMarkers.ToolCallStart}{toolCall.Name}");
                         
                         // 添加参数信息（用于详情展开）
                         if (toolCall.Arguments != null && toolCall.Arguments.Any())
                         {
                             var args = string.Join(", ", toolCall.Arguments.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
-                            toolCallInfo.AppendLine($"TOOL_PARAMS:{args}");
+                            toolCallInfo.AppendLine($"{ToolCallMessageMarkers.ToolParams}{args}");
                         }
                         
                         // 添加执行结果信息
                         if (correspondingResult != null)
                         {
                             var resultContent = correspondingResult.Result?.ToString() ?? "";
-                            toolCallInfo.AppendLine($"TOOL_RESULT_SUCCESS:{resultContent}");
+                            toolCallInfo.AppendLine($"{ToolCallMessageMarkers.ToolResultSuccess}{resultContent}");
                         }
                         else
                         {
-                            toolCallInfo.AppendLine($"TOOL_RESULT_FAILED:未找到执行结果");
+                            toolCallInfo.AppendLine($"{ToolCallMessageMarkers.ToolResultFailed}未找到执行结果");
                         }
                         
                         toolCallInfo.AppendLine("TOOL_CALL_END");
