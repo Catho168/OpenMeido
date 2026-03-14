@@ -71,15 +71,13 @@
     </Style>
 
     <Style x:Key="MiniChatTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="#FFFCFC"/>
-        <Setter Property="Foreground" Value="#3A2E34"/>
-        <Setter Property="BorderBrush" Value="#E8C4C5"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource MeidoThemeColor}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Padding" Value="4"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="SelectionBrush" Value="{StaticResource MeidoThemeColorLight}"/>
         <Setter Property="CaretBrush" Value="{StaticResource MeidoThemeColor}"/>
-        <Setter Property="FontFamily" Value="{StaticResource GlobalFontFamily}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -87,7 +85,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="12">
+                            CornerRadius="4">
                         <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -95,12 +93,10 @@
                             <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource MeidoThemeColorLight}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource MeidoThemeColor}"/>
-                            <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource MeidoThemeColorDark}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>
-                            <Setter TargetName="Border" Property="Background" Value="#FFF5F5"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

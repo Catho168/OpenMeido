@@ -29,7 +29,7 @@ namespace OpenMeido
         private readonly ChatWindowMcpStatusPanelCoordinator _mcpStatusPanelCoordinator;
         private readonly ChatWindowConversationCoordinator _conversationCoordinator;
 
-        private const string WelcomeMessageText = "🎀 大人好~妹抖酱在此！有什么需要吗？";
+        private const string WelcomeMessageText = "您好~有什么需要吗？";
 
         private IApiService CurrentApiService => _viewModel.CurrentApiService;
 
@@ -305,5 +305,10 @@ namespace OpenMeido
         }
 
         #endregion
+
+        private void InputPanelHost_Loaded(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

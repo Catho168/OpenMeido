@@ -394,30 +394,9 @@
                         <Grid Margin="18">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0"
-                                    Padding="14"
-                                    Background="#FFFFFFFF"
-                                    BorderBrush="{StaticResource ThemeBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource ThemeRadiusLarge}">
-                                <StackPanel>
-                                    <TextBlock Text="设置导航"
-                                               FontSize="12"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource ThemeTextPrimaryBrush}"/>
-                                    <TextBlock Text="按分类调整妹抖酱的连接方式、回复风格和工具能力。"
-                                               Style="{StaticResource HintTextStyle}"
-                                               Margin="0,6,0,0"/>
-                                </StackPanel>
-                            </Border>
-
-                            <StackPanel Grid.Row="1" Margin="0,18,0,0">
+                            <StackPanel Grid.Row="0" Margin="0,18,0,0">
                                 <Button x:Name="GeneralCategoryButton"
                                         Content="⚙️  通用设置"
                                         Style="{StaticResource SelectedCategoryButtonStyle}"
@@ -432,22 +411,6 @@
                                         Tag="MCP"/>
                             </StackPanel>
 
-                            <Border Grid.Row="4"
-                                    Margin="0,20,0,0"
-                                    Padding="14"
-                                    Background="{StaticResource ThemeSurfaceAltBrush}"
-                                    BorderBrush="{StaticResource ThemeBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource ThemeRadiusLarge}">
-                                <StackPanel>
-                                    <TextBlock Text="设计说明"
-                                               FontSize="12"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource ThemeTextPrimaryBrush}"/>
-                                    <TextBlock Text="本次重构保留原有分类切换、保存逻辑、窗口按钮和 MCP 配置交互链路。"
-                                               Style="{StaticResource HintTextStyle}"/>
-                                </StackPanel>
-                            </Border>
                         </Grid>
                     </Border>
 

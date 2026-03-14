@@ -60,7 +60,7 @@
 
             <!-- 底部输入区域 -->
             <controls:ChatInputPanelControl x:Name="InputPanelHost"
-                                            Grid.Row="4"/>
+                                            Grid.Row="4" Loaded="InputPanelHost_Loaded"/>
 
         </Grid>
         </Border>
